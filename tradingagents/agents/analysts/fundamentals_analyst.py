@@ -53,7 +53,14 @@ def create_fundamentals_analyst(llm):
         report = ""
 
         if len(result.tool_calls) == 0:
-            report = result.content
+            # Handle both string and list content (Gemini returns list)
+            if isinstance(result.content, list):
+                report = "".join([
+                    block.get("text", str(block)) if isinstance(block, dict) else str(block)
+                    for block in result.content
+                ])
+            else:
+                report = str(result.content)
 
         return {
             "messages": [result],

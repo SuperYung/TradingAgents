@@ -37,9 +37,18 @@ def create_trader(llm, memory):
 
         result = llm.invoke(messages)
 
+        # Handle both string and list content (Gemini returns list)
+        if isinstance(result.content, list):
+            content = "".join([
+                block.get("text", str(block)) if isinstance(block, dict) else str(block)
+                for block in result.content
+            ])
+        else:
+            content = str(result.content)
+
         return {
             "messages": [result],
-            "trader_investment_plan": result.content,
+            "trader_investment_plan": content,
             "sender": name,
         }
 

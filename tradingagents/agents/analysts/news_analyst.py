@@ -48,8 +48,15 @@ def create_news_analyst(llm):
         report = ""
 
         if len(result.tool_calls) == 0:
-            print("result.content: " + result.content)
-            report = result.content
+            # Handle both string and list content (Gemini returns list)
+            if isinstance(result.content, list):
+                # Extract text from content blocks
+                report = "".join([
+                    block.get("text", str(block)) if isinstance(block, dict) else str(block)
+                    for block in result.content
+                ])
+            else:
+                report = str(result.content)
 
         return {
             "messages": [result],
