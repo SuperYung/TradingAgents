@@ -10,8 +10,8 @@ DEFAULT_CONFIG = {
     ),
     # LLM settings - Default to Google Gemini Pro (free tier)
     "llm_provider": "google",  # Options: "google", "openai", "anthropic", "ollama"
-    "deep_think_llm": "gemini-1.5-pro",  # Gemini Pro for deep thinking
-    "quick_think_llm": "gemini-1.5-flash",  # Gemini Flash for quick responses
+    "deep_think_llm": "gemini-2.5-pro",  # Gemini Pro for deep thinking
+    "quick_think_llm": "gemini-2.5-flash",  # Gemini Flash for quick responses
     "backend_url": "",  # Not needed for Google, set for OpenAI/Ollama
     # Rate limiting settings
     "rate_limit_max_retries": 5,

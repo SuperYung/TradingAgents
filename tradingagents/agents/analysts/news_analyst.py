@@ -48,6 +48,7 @@ def create_news_analyst(llm):
         report = ""
 
         if len(result.tool_calls) == 0:
+            print("result.content: " + result.content)
             report = result.content
 
         return {

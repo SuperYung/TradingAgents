@@ -31,9 +31,9 @@ def test_news_analyst():
     
     try:
         from tradingagents.default_config import DEFAULT_CONFIG
-        from langchain_google_genai import ChatGoogleGenerativeAI
         from tradingagents.agents.analysts.news_analyst import create_news_analyst
-        from tradingagents.agents.utils.agent_states import AgentState
+        from tradingagents.agents.utils.agent_states import AgentState            
+        from langchain_google_genai import ChatGoogleGenerativeAI
         
         # Setup
         config = DEFAULT_CONFIG.copy()
@@ -46,7 +46,7 @@ def test_news_analyst():
         state = {
             "trade_date": "2024-05-10",
             "company_of_interest": "AAPL",
-            "messages": []
+            "messages": [("human", "Anaylze AAPL")]
         }
         
         print(f"Testing news analyst for {state['company_of_interest']} on {state['trade_date']}")

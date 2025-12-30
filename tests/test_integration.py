@@ -42,8 +42,8 @@ def test_full_workflow_google():
         # Create a config with Google Gemini
         config = DEFAULT_CONFIG.copy()
         config["llm_provider"] = "google"
-        config["deep_think_llm"] = "gemini-1.5-pro"
-        config["quick_think_llm"] = "gemini-1.5-flash"
+        config["deep_think_llm"] = "gemini-2.5-pro"
+        config["quick_think_llm"] = "gemini-2.5-flash"
         config["max_debate_rounds"] = 1
         config["max_risk_discuss_rounds"] = 1
         
