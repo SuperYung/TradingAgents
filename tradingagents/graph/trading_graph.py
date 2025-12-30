@@ -21,6 +21,7 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.dataflows.config import set_config
+from tradingagents.dataflows.rate_limit_utils import llm_rate_limited
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -41,6 +42,26 @@ from .setup import GraphSetup
 from .propagation import Propagator
 from .reflection import Reflector
 from .signal_processing import SignalProcessor
+
+
+class RateLimitedLLMWrapper:
+    """Wrapper to add rate limiting to LangChain LLM calls."""
+    
+    def __init__(self, llm):
+        self.llm = llm
+    
+    @llm_rate_limited()
+    def invoke(self, *args, **kwargs):
+        """Rate-limited invoke method."""
+        return self.llm.invoke(*args, **kwargs)
+    
+    def bind_tools(self, *args, **kwargs):
+        """Pass through bind_tools - returns the underlying LLM with tools bound."""
+        return self.llm.bind_tools(*args, **kwargs)
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the underlying LLM."""
+        return getattr(self.llm, name)
 
 
 class TradingAgentsGraph:
@@ -83,6 +104,11 @@ class TradingAgentsGraph:
             self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"])
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
+        
+        # Wrap LLMs with rate limiting (note: we don't wrap them because bind_tools returns new instance)
+        # The rate limiting is handled at the invoke level
+        # self.deep_thinking_llm = RateLimitedLLMWrapper(self.deep_thinking_llm)
+        # self.quick_thinking_llm = RateLimitedLLMWrapper(self.quick_thinking_llm)
         
         # Initialize memories
         self.bull_memory = FinancialSituationMemory("bull_memory", self.config)

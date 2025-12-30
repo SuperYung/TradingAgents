@@ -4,7 +4,11 @@ from dateutil.relativedelta import relativedelta
 import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils
+from .cache_utils import cached
+from .rate_limit_utils import data_api_rate_limited
 
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited(max_retries=3)
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
@@ -293,6 +297,7 @@ def get_stockstats_indicator(
     return str(indicator_value)
 
 
+@data_api_rate_limited(max_retries=3)
 def get_balance_sheet(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -323,6 +328,7 @@ def get_balance_sheet(
         return f"Error retrieving balance sheet for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_cashflow(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -353,6 +359,7 @@ def get_cashflow(
         return f"Error retrieving cash flow for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_income_statement(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -383,6 +390,7 @@ def get_income_statement(
         return f"Error retrieving income statement for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_insider_transactions(
     ticker: Annotated[str, "ticker symbol of the company"]
 ):

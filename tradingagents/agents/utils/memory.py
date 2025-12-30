@@ -1,25 +1,51 @@
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
+import google.generativeai as genai
 
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
-        if config["backend_url"] == "http://localhost:11434/v1":
+        self.config = config
+        self.llm_provider = config.get("llm_provider", "openai").lower()
+        
+        # Setup embedding based on provider
+        if self.llm_provider == "google":
+            # Use Google Gemini embeddings
+            self.embedding_model = "models/text-embedding-004"
+            # Configure genai with API key from environment
+            import os
+            api_key = os.getenv("GOOGLE_API_KEY")
+            if api_key:
+                genai.configure(api_key=api_key)
+        elif config.get("backend_url") == "http://localhost:11434/v1":
             self.embedding = "nomic-embed-text"
+            self.client = OpenAI(base_url=config["backend_url"])
         else:
+            # Default OpenAI
             self.embedding = "text-embedding-3-small"
-        self.client = OpenAI(base_url=config["backend_url"])
+            self.client = OpenAI(base_url=config.get("backend_url", "https://api.openai.com/v1"))
+            
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
 
     def get_embedding(self, text):
-        """Get OpenAI embedding for a text"""
+        """Get embedding for a text based on configured provider"""
         
-        response = self.client.embeddings.create(
-            model=self.embedding, input=text
-        )
-        return response.data[0].embedding
+        if self.llm_provider == "google":
+            # Use Google Gemini embeddings
+            result = genai.embed_content(
+                model=self.embedding_model,
+                content=text,
+                task_type="retrieval_document"
+            )
+            return result['embedding']
+        else:
+            # Use OpenAI-compatible embeddings
+            response = self.client.embeddings.create(
+                model=self.embedding, input=text
+            )
+            return response.data[0].embedding
 
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""
@@ -69,7 +95,14 @@ class FinancialSituationMemory:
 
 if __name__ == "__main__":
     # Example usage
-    matcher = FinancialSituationMemory()
+    import os
+    from tradingagents.default_config import DEFAULT_CONFIG
+    
+    # Example config for testing
+    test_config = DEFAULT_CONFIG.copy()
+    test_config["llm_provider"] = "google"  # or "openai"
+    
+    matcher = FinancialSituationMemory("test_memory", test_config)
 
     # Example data
     example_data = [
