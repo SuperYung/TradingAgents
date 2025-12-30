@@ -11,6 +11,17 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    env_file = project_root / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+    else:
+        load_dotenv()  # Try to load from default locations
+except ImportError:
+    pass  # python-dotenv not installed
+
 
 def test_full_workflow_google():
     """Test the full workflow with Google Gemini."""
@@ -20,6 +31,7 @@ def test_full_workflow_google():
     
     if not os.getenv("GOOGLE_API_KEY"):
         print("⚠ GOOGLE_API_KEY not set. Skipping this test.")
+        print(f"  Checked .env file at: {project_root / '.env'}")
         print("  Set it with: export GOOGLE_API_KEY='your-api-key-here'")
         return None
     
@@ -167,6 +179,7 @@ def test_memory_persistence():
     
     if not os.getenv("GOOGLE_API_KEY"):
         print("⚠ GOOGLE_API_KEY not set. Skipping this test.")
+        print(f"  Checked .env file at: {project_root / '.env'}")
         return None
     
     try:
@@ -220,11 +233,12 @@ def main():
     print("TradingAgents Integration Tests")
     print("=" * 60)
     print("\nThese tests run the full system and make actual API calls.")
-    print("Make sure you have set GOOGLE_API_KEY in your environment.\n")
+    print(f"Make sure you have set GOOGLE_API_KEY in .env file at: {project_root / '.env'}\n")
     
     # Check for API key
     if not os.getenv("GOOGLE_API_KEY"):
         print("⚠ GOOGLE_API_KEY not set!")
+        print(f"  Checked .env file at: {project_root / '.env'}")
         print("  Set it with: export GOOGLE_API_KEY='your-api-key-here'")
         print("\nMost tests will be skipped without this key.\n")
     
