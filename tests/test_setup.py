@@ -16,10 +16,10 @@ def test_imports():
     print("Testing imports...")
     
     try:
-        import google.generativeai as genai
-        print("✓ google.generativeai imported successfully")
+        from google import genai
+        print("✓ google.genai imported successfully")
     except ImportError as e:
-        print(f"✗ Failed to import google.generativeai: {e}")
+        print(f"✗ Failed to import google.genai: {e}")
         return False
     
     try:

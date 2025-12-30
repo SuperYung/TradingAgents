@@ -112,7 +112,7 @@ pip install -r requirements.txt
 ```
 
 New dependencies added:
-- `google-generativeai`: Google Gemini API
+- `google-genai`: Google Gemini API (replaces deprecated google-generativeai)
 - `tenacity`: Retry logic
 - `python-dotenv`: Environment management
 

@@ -77,7 +77,7 @@ Migrated from OpenAI and paid data sources to Google Gemini Pro and Yahoo Financ
 - Better logging
 
 #### Dependencies ([#requirements.txt](requirements.txt))
-- Added: `google-generativeai`
+- Added: `google-genai` (replaces deprecated google-generativeai)
 - Added: `tenacity`
 - Added: `python-dotenv`
 

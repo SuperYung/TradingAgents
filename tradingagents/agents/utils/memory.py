@@ -1,7 +1,7 @@
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
-import google.generativeai as genai
+import os
 
 
 class FinancialSituationMemory:
@@ -12,12 +12,14 @@ class FinancialSituationMemory:
         # Setup embedding based on provider
         if self.llm_provider == "google":
             # Use Google Gemini embeddings
-            self.embedding_model = "models/text-embedding-004"
-            # Configure genai with API key from environment
-            import os
+            from google import genai
+            from google.genai import types
+            
+            self.embedding_model = "text-embedding-004"
             api_key = os.getenv("GOOGLE_API_KEY")
-            if api_key:
-                genai.configure(api_key=api_key)
+            if not api_key:
+                raise ValueError("GOOGLE_API_KEY environment variable is required for Google embeddings")
+            self.genai_client = genai.Client(api_key=api_key)
         elif config.get("backend_url") == "http://localhost:11434/v1":
             self.embedding = "nomic-embed-text"
             self.client = OpenAI(base_url=config["backend_url"])
@@ -33,13 +35,12 @@ class FinancialSituationMemory:
         """Get embedding for a text based on configured provider"""
         
         if self.llm_provider == "google":
-            # Use Google Gemini embeddings
-            result = genai.embed_content(
+            # Use Google Gemini embeddings with new google.genai package
+            result = self.genai_client.models.embed_content(
                 model=self.embedding_model,
-                content=text,
-                task_type="retrieval_document"
+                content=text
             )
-            return result['embedding']
+            return result.embeddings[0].values
         else:
             # Use OpenAI-compatible embeddings
             response = self.client.embeddings.create(
