@@ -11,6 +11,18 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    env_file = project_root / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+        print(f"Loaded environment from {env_file}")
+    else:
+        load_dotenv()  # Try to load from default locations
+except ImportError:
+    print("⚠ python-dotenv not installed, skipping .env file loading")
+
 def test_imports():
     """Test that all required packages can be imported."""
     print("Testing imports...")
@@ -62,7 +74,11 @@ def test_environment_variables():
         print(f"✓ GOOGLE_API_KEY is set (length: {len(google_api_key)})")
     else:
         print("⚠ GOOGLE_API_KEY is not set. You'll need this for Google Gemini.")
-        print("  Set it with: export GOOGLE_API_KEY='your-api-key-here'")
+        print(f"  Checked .env file at: {project_root / '.env'}")
+        print("  Options:")
+        print("    1. Create .env file: echo 'GOOGLE_API_KEY=your-key' > .env")
+        print("    2. Export directly: export GOOGLE_API_KEY='your-api-key-here'")
+        print("    3. Copy from template: cp env.example .env (then edit)")
     
     return True
 
