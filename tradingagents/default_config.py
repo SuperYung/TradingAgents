@@ -35,7 +35,7 @@ DEFAULT_CONFIG = {
         "core_stock_apis": "yfinance",       # Free: Yahoo Finance
         "technical_indicators": "yfinance",  # Free: Yahoo Finance
         "fundamental_data": "yfinance",      # Free: Yahoo Finance (migrated from alpha_vantage)
-        "news_data": "google",               # Free: Google News (migrated from alpha_vantage)
+        "news_data": "yfinance",             # Free: Yahoo Finance (fast and reliable)
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {

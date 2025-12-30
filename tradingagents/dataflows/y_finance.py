@@ -413,3 +413,135 @@ def get_insider_transactions(
         
     except Exception as e:
         return f"Error retrieving insider transactions for {ticker}: {str(e)}"
+
+
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited()
+def get_yfinance_news(
+    ticker: Annotated[str, "Ticker symbol"],
+    start_date: Annotated[str, "Start date in yyyy-mm-dd format (not used, kept for compatibility)"],
+    end_date: Annotated[str, "End date in yyyy-mm-dd format (not used, kept for compatibility)"],
+) -> str:
+    """Get recent news for a ticker from Yahoo Finance.
+    
+    Note: Yahoo Finance provides the most recent news regardless of date parameters.
+    The start_date and end_date parameters are kept for API compatibility but not used.
+    """
+    try:
+        ticker_obj = yf.Ticker(ticker.upper())
+        news = ticker_obj.news
+        
+        if not news or len(news) == 0:
+            return f"No recent news found for {ticker}"
+        
+        news_str = ""
+        for i, article in enumerate(news[:10], 1):  # Top 10 articles
+            # Convert timestamp to readable date
+            try:
+                published = datetime.fromtimestamp(
+                    article.get('providerPublishTime', 0)
+                ).strftime('%Y-%m-%d %H:%M')
+            except:
+                published = "Unknown date"
+            
+            news_str += f"### {i}. {article.get('title', 'No title')}\n"
+            news_str += f"**Publisher:** {article.get('publisher', 'Unknown')}\n"
+            news_str += f"**Published:** {published}\n"
+            
+            # Add summary if available
+            summary = article.get('summary', '')
+            if summary:
+                news_str += f"{summary}\n\n"
+            else:
+                news_str += "No summary available.\n\n"
+        
+        header = f"# Recent News for {ticker.upper()}\n"
+        header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"# Total articles: {min(len(news), 10)}\n\n"
+        
+        return header + news_str
+        
+    except Exception as e:
+        return f"Error fetching news for {ticker}: {str(e)}"
+
+
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited()
+def get_yfinance_global_news(
+    curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    look_back_days: Annotated[int, "Number of days to look back (not used)"] = 7,
+    limit: Annotated[int, "Maximum number of articles to return"] = 5,
+) -> str:
+    """Get general market news from major indices via Yahoo Finance.
+    
+    Fetches news from S&P 500, Dow Jones, and Nasdaq indices to get
+    broad market coverage.
+    """
+    try:
+        # Major market indices
+        indices = {
+            '^GSPC': 'S&P 500',
+            '^DJI': 'Dow Jones',
+            '^IXIC': 'Nasdaq'
+        }
+        
+        all_news = []
+        seen_titles = set()
+        
+        for index_symbol, index_name in indices.items():
+            try:
+                ticker_obj = yf.Ticker(index_symbol)
+                news = ticker_obj.news
+                
+                if not news:
+                    continue
+                
+                # Get top 3 articles from each index
+                for article in news[:3]:
+                    title = article.get('title', '')
+                    # Deduplicate by title
+                    if title and title not in seen_titles:
+                        seen_titles.add(title)
+                        article['index_source'] = index_name
+                        all_news.append(article)
+                        
+                        if len(all_news) >= limit:
+                            break
+            except Exception as e:
+                # Skip this index if it fails
+                continue
+            
+            if len(all_news) >= limit:
+                break
+        
+        if not all_news:
+            return "No global market news found"
+        
+        news_str = ""
+        for i, article in enumerate(all_news[:limit], 1):
+            try:
+                published = datetime.fromtimestamp(
+                    article.get('providerPublishTime', 0)
+                ).strftime('%Y-%m-%d %H:%M')
+            except:
+                published = "Unknown date"
+            
+            news_str += f"### {i}. {article.get('title', 'No title')}\n"
+            news_str += f"**Source Index:** {article.get('index_source', 'Unknown')}\n"
+            news_str += f"**Publisher:** {article.get('publisher', 'Unknown')}\n"
+            news_str += f"**Published:** {published}\n"
+            
+            summary = article.get('summary', '')
+            if summary:
+                news_str += f"{summary}\n\n"
+            else:
+                news_str += "No summary available.\n\n"
+        
+        header = f"# Global Market News\n"
+        header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"# Total articles: {len(all_news[:limit])}\n\n"
+        
+        return header + news_str
+        
+    except Exception as e:
+        return f"Error fetching global market news: {str(e)}"
