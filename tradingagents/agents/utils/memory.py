@@ -38,7 +38,7 @@ class FinancialSituationMemory:
             # Use Google Gemini embeddings with new google.genai package
             result = self.genai_client.models.embed_content(
                 model=self.embedding_model,
-                content=text
+                contents=text
             )
             return result.embeddings[0].values
         else:
