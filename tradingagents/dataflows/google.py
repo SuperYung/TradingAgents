@@ -77,7 +77,7 @@ def get_google_global_news(
     
     if len(all_news) == 0:
         return ""
-    
+
     news_str = ""
     for news in all_news[:limit]:
         news_str += (

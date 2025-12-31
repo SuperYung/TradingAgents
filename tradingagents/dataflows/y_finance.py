@@ -424,18 +424,33 @@ def get_yfinance_news(
 ) -> str:
     """Get recent news for a ticker from Yahoo Finance.
     
-    Note: Yahoo Finance provides the most recent news regardless of date parameters.
-    The start_date and end_date parameters are kept for API compatibility but not used.
+    Note: Yahoo Finance only provides recent news (last ~7 days), not historical news.
+    If you need historical news for a past date, this will return recent news as context.
     """
     try:
         ticker_obj = yf.Ticker(ticker.upper())
         news = ticker_obj.news
         
         if not news or len(news) == 0:
-            return f"No recent news found for {ticker}"
+            return f"# No Recent News Available for {ticker.upper()}\n\nYahoo Finance currently has no news articles available for {ticker}. This could be due to:\n- The ticker symbol being inactive or delisted\n- Yahoo Finance API temporarily unavailable\n- No recent news coverage for this symbol\n\nNote: Yahoo Finance only provides recent news (approximately last 7 days), not historical news."
+        
+        # Filter out invalid/empty articles
+        valid_articles = []
+        for article in news[:15]:  # Check top 15 to get 10 valid ones
+            title = article.get('title', '').strip()
+            timestamp = article.get('providerPublishTime', 0)
+            
+            # Skip articles with no title or invalid timestamp
+            if title and title != 'No title' and timestamp > 0:
+                valid_articles.append(article)
+                if len(valid_articles) >= 10:
+                    break
+        
+        if not valid_articles:
+            return f"# No Valid News Found for {ticker.upper()}\n\nYahoo Finance returned news articles but they appear to be malformed or empty. This may indicate:\n- Data quality issues with Yahoo Finance API\n- Historical date requested (Yahoo Finance only provides recent news)\n- Temporary API issues\n\nConsider using an alternative news source for historical analysis."
         
         news_str = ""
-        for i, article in enumerate(news[:10], 1):  # Top 10 articles
+        for i, article in enumerate(valid_articles, 1):
             # Convert timestamp to readable date
             try:
                 published = datetime.fromtimestamp(
@@ -444,25 +459,32 @@ def get_yfinance_news(
             except:
                 published = "Unknown date"
             
-            news_str += f"### {i}. {article.get('title', 'No title')}\n"
-            news_str += f"**Publisher:** {article.get('publisher', 'Unknown')}\n"
+            title = article.get('title', 'No title')
+            publisher = article.get('publisher', 'Unknown')
+            link = article.get('link', '')
+            
+            news_str += f"### {i}. {title}\n"
+            news_str += f"**Publisher:** {publisher}\n"
             news_str += f"**Published:** {published}\n"
+            if link:
+                news_str += f"**Link:** {link}\n"
             
             # Add summary if available
             summary = article.get('summary', '')
             if summary:
-                news_str += f"{summary}\n\n"
+                news_str += f"\n{summary}\n\n"
             else:
-                news_str += "No summary available.\n\n"
+                news_str += f"\n*No summary available.*\n\n"
         
         header = f"# Recent News for {ticker.upper()}\n"
         header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        header += f"# Total articles: {min(len(news), 10)}\n\n"
+        header += f"# Total valid articles: {len(valid_articles)}\n"
+        header += f"# Note: Yahoo Finance only provides recent news (~7 days), not historical news\n\n"
         
         return header + news_str
         
     except Exception as e:
-        return f"Error fetching news for {ticker}: {str(e)}"
+        return f"# Error Fetching News for {ticker.upper()}\n\n**Error:** {str(e)}\n\nYahoo Finance news may be temporarily unavailable. Consider using alternative news sources."
 
 
 @cached(ttl_seconds=3600)  # Cache for 1 hour
@@ -474,12 +496,11 @@ def get_yfinance_global_news(
 ) -> str:
     """Get general market news from major stocks via Yahoo Finance.
     
-    Uses major market-moving stocks as proxies for global market news since
-    Yahoo Finance doesn't provide reliable news feeds for indices.
+    Uses major market-moving stocks as proxies for global market news.
+    Note: Yahoo Finance only provides recent news (~7 days), not historical news.
     """
     try:
         # Use major market-moving stocks as proxies for global news
-        # These companies are large enough that their news often reflects broader market trends
         proxy_stocks = {
             'AAPL': 'Apple/Tech',
             'MSFT': 'Microsoft/Tech',
@@ -490,6 +511,7 @@ def get_yfinance_global_news(
         
         all_news = []
         seen_titles = set()
+        errors = []
         
         for ticker_symbol, sector in proxy_stocks.items():
             try:
@@ -499,9 +521,15 @@ def get_yfinance_global_news(
                 if not news or len(news) == 0:
                     continue
                 
-                # Get top 2 articles from each stock
-                for article in news[:2]:
-                    title = article.get('title', '')
+                # Get top 2 valid articles from each stock
+                for article in news[:5]:  # Check top 5 to get 2 valid ones
+                    title = article.get('title', '').strip()
+                    timestamp = article.get('providerPublishTime', 0)
+                    
+                    # Skip invalid articles
+                    if not title or title == 'No title' or timestamp <= 0:
+                        continue
+                    
                     # Deduplicate by title
                     if title and title not in seen_titles:
                         seen_titles.add(title)
@@ -511,15 +539,36 @@ def get_yfinance_global_news(
                         if len(all_news) >= limit:
                             break
             except Exception as e:
-                # Skip this ticker if it fails, continue with others
+                errors.append(f"{ticker_symbol}: {str(e)}")
                 continue
             
             if len(all_news) >= limit:
                 break
         
-        # If we couldn't get any news, return a simple message
+        # If we couldn't get any valid news
         if not all_news:
-            return f"# Global Market News\n\nUnable to fetch global market news at this time. Yahoo Finance news feed may be temporarily unavailable for the selected proxy stocks. Consider using alternative news sources or try again later."
+            error_details = "\n".join(errors) if errors else "No specific errors recorded"
+            return f"""# Global Market News - No Valid Data Available
+
+Yahoo Finance was unable to provide valid global market news at this time.
+
+**Attempted sources:** {', '.join(proxy_stocks.keys())}
+
+**Possible reasons:**
+- Yahoo Finance only provides recent news (~7 days), not historical news
+- Historical date requested (requested: {curr_date})
+- Data quality issues with Yahoo Finance API
+- Temporary API unavailability
+- All returned articles were malformed or empty
+
+**Recommendation:** For historical analysis (dates more than 7 days old), consider:
+1. Using Google News scraping (set `tool_vendors = {{"get_global_news": "google"}}` in config)
+2. Using alternative news APIs (NewsAPI, Finnhub)
+3. Using cached/local news data for the historical period
+
+**Debug info:**
+{error_details}
+"""
         
         news_str = ""
         for i, article in enumerate(all_news[:limit], 1):
@@ -530,24 +579,37 @@ def get_yfinance_global_news(
             except:
                 published = "Unknown date"
             
-            news_str += f"### {i}. {article.get('title', 'No title')}\n"
-            news_str += f"**Sector:** {article.get('sector_source', 'General Market')}\n"
-            news_str += f"**Publisher:** {article.get('publisher', 'Unknown')}\n"
+            title = article.get('title', 'No title')
+            sector = article.get('sector_source', 'General Market')
+            publisher = article.get('publisher', 'Unknown')
+            link = article.get('link', '')
+            
+            news_str += f"### {i}. {title}\n"
+            news_str += f"**Sector:** {sector}\n"
+            news_str += f"**Publisher:** {publisher}\n"
             news_str += f"**Published:** {published}\n"
+            if link:
+                news_str += f"**Link:** {link}\n"
             
             summary = article.get('summary', '')
             if summary:
-                news_str += f"{summary}\n\n"
+                news_str += f"\n{summary}\n\n"
             else:
-                news_str += "No summary available.\n\n"
+                news_str += f"\n*No summary available.*\n\n"
         
         header = f"# Global Market News\n"
         header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         header += f"# Source: Major market-moving stocks across sectors\n"
-        header += f"# Total articles: {len(all_news[:limit])}\n\n"
+        header += f"# Total valid articles: {len(all_news[:limit])}\n"
+        header += f"# Note: Yahoo Finance only provides recent news (~7 days)\n\n"
         
         return header + news_str
         
     except Exception as e:
-        # Return a graceful error message instead of failing
-        return f"# Global Market News\n\nUnable to fetch global market news: {str(e)}\n\nYahoo Finance news may be temporarily unavailable. Consider using alternative news sources."
+        return f"""# Global Market News - Error
+
+**Error:** {str(e)}
+
+Yahoo Finance news may be temporarily unavailable.
+
+**Note:** Yahoo Finance only provides recent news (approximately last 7 days), not historical news. If analyzing a historical date, consider using alternative news sources."""

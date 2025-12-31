@@ -231,7 +231,7 @@ class TradingAgentsGraph:
 
         # Finalize logging for this run
         self.finalize_logging()
-        
+
         # Return decision and processed signal
         return final_state, self.process_signal(final_state["final_trade_decision"])
 
