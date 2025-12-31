@@ -1,5 +1,6 @@
 import time
 import json
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_research_manager(llm, memory):
@@ -37,6 +38,22 @@ Here is the debate:
 Debate History:
 {history}"""
         response = llm.invoke(prompt)
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="research_manager",
+                system_prompt=prompt[:1000],  # First 1000 chars
+                input_messages=[{"role": "user", "content": prompt}],
+                llm_response=response,
+                tool_calls=[],
+                final_output=str(response.content),
+                metadata={
+                    "debate_rounds": investment_debate_state["count"],
+                    "has_past_memories": bool(past_memories)
+                }
+            )
 
         new_investment_debate_state = {
             "judge_decision": response.content,

@@ -22,6 +22,7 @@ from tradingagents.agents.utils.agent_states import (
 )
 from tradingagents.dataflows.config import set_config
 from tradingagents.dataflows.rate_limit_utils import llm_rate_limited
+from tradingagents.agents.utils.agent_logger import init_agent_logger, get_agent_logger
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -72,6 +73,8 @@ class TradingAgentsGraph:
         selected_analysts=["market", "social", "news", "fundamentals"],
         debug=False,
         config: Dict[str, Any] = None,
+        enable_logging: bool = True,
+        log_dir: Optional[str] = None,
     ):
         """Initialize the trading agents graph and components.
 
@@ -79,9 +82,12 @@ class TradingAgentsGraph:
             selected_analysts: List of analyst types to include
             debug: Whether to run in debug mode
             config: Configuration dictionary. If None, uses default config
+            enable_logging: Whether to log agent interactions to files
+            log_dir: Directory to save logs. If None, uses ./agent_logs
         """
         self.debug = debug
         self.config = config or DEFAULT_CONFIG
+        self.enable_logging = enable_logging
 
         # Update the interface's config
         set_config(self.config)
@@ -145,6 +151,14 @@ class TradingAgentsGraph:
 
         # Set up the graph
         self.graph = self.graph_setup.setup_graph(selected_analysts)
+        
+        # Initialize agent logger
+        if self.enable_logging:
+            self.logger = init_agent_logger(enabled=True, log_dir=log_dir)
+            print(f"✓ Agent logging enabled. Logs will be saved to: {self.logger.get_log_directory()}")
+        else:
+            self.logger = None
+            init_agent_logger(enabled=False)
 
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:
         """Create tool nodes for different data sources using abstract methods."""
@@ -215,6 +229,9 @@ class TradingAgentsGraph:
         # Log state
         self._log_state(trade_date, final_state)
 
+        # Finalize logging for this run
+        self.finalize_logging()
+        
         # Return decision and processed signal
         return final_state, self.process_signal(final_state["final_trade_decision"])
 
@@ -277,6 +294,18 @@ class TradingAgentsGraph:
         self.reflector.reflect_risk_manager(
             self.curr_state, returns_losses, self.risk_manager_memory
         )
+    
+    def finalize_logging(self):
+        """Finalize agent logging (create index, close run)."""
+        if self.enable_logging and self.logger:
+            self.logger.create_index()
+            print(f"✓ Agent logs saved and indexed at: {self.logger.get_log_directory()}")
+    
+    def get_log_directory(self) -> Optional[str]:
+        """Get the current log directory path."""
+        if self.logger:
+            return self.logger.get_log_directory()
+        return None
 
     def process_signal(self, full_signal):
         """Process a signal to extract the core decision."""

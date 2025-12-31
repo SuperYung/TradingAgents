@@ -3,6 +3,7 @@ import time
 import json
 from tradingagents.agents.utils.agent_utils import get_fundamentals, get_balance_sheet, get_cashflow, get_income_statement, get_insider_sentiment, get_insider_transactions
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_fundamentals_analyst(llm):
@@ -61,6 +62,29 @@ def create_fundamentals_analyst(llm):
                 ])
             else:
                 report = str(result.content)
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="fundamentals_analyst",
+                system_prompt=system_message,
+                input_messages=state.get("messages", []),
+                llm_response=result,
+                tool_calls=[
+                    {
+                        "name": tc.get("name"),
+                        "args": tc.get("args"),
+                        "id": tc.get("id")
+                    } for tc in result.tool_calls
+                ] if hasattr(result, 'tool_calls') and result.tool_calls else [],
+                final_output=report,
+                metadata={
+                    "ticker": ticker,
+                    "trade_date": current_date,
+                    "tools_available": ", ".join([tool.name for tool in tools])
+                }
+            )
 
         return {
             "messages": [result],
