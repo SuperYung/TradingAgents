@@ -70,6 +70,11 @@ class AgentLogger:
         # Extract response content safely
         response_content = self._extract_content(llm_response)
         
+        # Ensure system_prompt is a string (handle accidental tuples)
+        if isinstance(system_prompt, tuple):
+            system_prompt = " ".join(str(s) for s in system_prompt)
+        system_prompt = str(system_prompt)
+        
         # Build the log entry
         log_entry = {
             "run_id": self.run_id,
