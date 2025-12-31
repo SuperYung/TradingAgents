@@ -10,4 +10,4 @@ eval_data/
 *.egg-info/
 .env
 tradingagents/dataflows/cache/
-agent_logs/
+#agent_logs/
