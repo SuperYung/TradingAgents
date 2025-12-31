@@ -48,7 +48,7 @@ def test_full_workflow_google():
         config["max_risk_discuss_rounds"] = 1
         
         # Use only news analyst for faster testing
-        config["data_vendors"]["news_data"] = "google"
+        config["data_vendors"]["news_data"] = "yfinance"
         
         print("\nConfiguration:")
         print(f"  Provider: {config['llm_provider']}")
