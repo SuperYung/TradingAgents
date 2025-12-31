@@ -34,12 +34,13 @@ DEFAULT_CONFIG = {
     "data_vendors": {
         "core_stock_apis": "yfinance",       # Free: Yahoo Finance
         "technical_indicators": "yfinance",  # Free: Yahoo Finance
-        "fundamental_data": "alpha_vantage", # Free: Yahoo Finance (migrated from alpha_vantage)
-        "news_data": "yfinance",             # Free: Yahoo Finance (fast and reliable)
+        "fundamental_data": "yfinance",      # Free: Yahoo Finance
+        "news_data": "yfinance",             # Free: Yahoo Finance (ticker-specific news works best)
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {
         # Example: "get_stock_data": "yfinance",
-        # Example: "get_news": "google",
+        # Uncomment below if yfinance global news has issues:
+        # "get_global_news": "google",  # Use Google for global news instead of yfinance
     },
 }

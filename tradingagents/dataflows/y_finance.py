@@ -472,50 +472,54 @@ def get_yfinance_global_news(
     look_back_days: Annotated[int, "Number of days to look back (not used)"] = 7,
     limit: Annotated[int, "Maximum number of articles to return"] = 5,
 ) -> str:
-    """Get general market news from major indices via Yahoo Finance.
+    """Get general market news from major stocks via Yahoo Finance.
     
-    Fetches news from S&P 500, Dow Jones, and Nasdaq indices to get
-    broad market coverage.
+    Uses major market-moving stocks as proxies for global market news since
+    Yahoo Finance doesn't provide reliable news feeds for indices.
     """
     try:
-        # Major market indices
-        indices = {
-            '^GSPC': 'S&P 500',
-            '^DJI': 'Dow Jones',
-            '^IXIC': 'Nasdaq'
+        # Use major market-moving stocks as proxies for global news
+        # These companies are large enough that their news often reflects broader market trends
+        proxy_stocks = {
+            'AAPL': 'Apple/Tech',
+            'MSFT': 'Microsoft/Tech',
+            'TSLA': 'Tesla/EV',
+            'JPM': 'JPMorgan/Finance',
+            'XOM': 'Exxon/Energy'
         }
         
         all_news = []
         seen_titles = set()
         
-        for index_symbol, index_name in indices.items():
+        for ticker_symbol, sector in proxy_stocks.items():
             try:
-                ticker_obj = yf.Ticker(index_symbol)
+                ticker_obj = yf.Ticker(ticker_symbol)
                 news = ticker_obj.news
                 
-                if not news:
+                if not news or len(news) == 0:
                     continue
                 
-                # Get top 3 articles from each index
-                for article in news[:3]:
+                # Get top 2 articles from each stock
+                for article in news[:2]:
                     title = article.get('title', '')
                     # Deduplicate by title
                     if title and title not in seen_titles:
                         seen_titles.add(title)
-                        article['index_source'] = index_name
+                        article['sector_source'] = sector
                         all_news.append(article)
                         
                         if len(all_news) >= limit:
                             break
             except Exception as e:
-                # Skip this index if it fails
+                # Skip this ticker if it fails, continue with others
                 continue
             
             if len(all_news) >= limit:
                 break
         
+        # If we couldn't get any news, return a simple message
         if not all_news:
-            return "No global market news found"
+            return f"# Global Market News\n\nUnable to fetch global market news at this time. Yahoo Finance news feed may be temporarily unavailable for the selected proxy stocks. Consider using alternative news sources or try again later."
         
         news_str = ""
         for i, article in enumerate(all_news[:limit], 1):
@@ -527,7 +531,7 @@ def get_yfinance_global_news(
                 published = "Unknown date"
             
             news_str += f"### {i}. {article.get('title', 'No title')}\n"
-            news_str += f"**Source Index:** {article.get('index_source', 'Unknown')}\n"
+            news_str += f"**Sector:** {article.get('sector_source', 'General Market')}\n"
             news_str += f"**Publisher:** {article.get('publisher', 'Unknown')}\n"
             news_str += f"**Published:** {published}\n"
             
@@ -539,9 +543,11 @@ def get_yfinance_global_news(
         
         header = f"# Global Market News\n"
         header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"# Source: Major market-moving stocks across sectors\n"
         header += f"# Total articles: {len(all_news[:limit])}\n\n"
         
         return header + news_str
         
     except Exception as e:
-        return f"Error fetching global market news: {str(e)}"
+        # Return a graceful error message instead of failing
+        return f"# Global Market News\n\nUnable to fetch global market news: {str(e)}\n\nYahoo Finance news may be temporarily unavailable. Consider using alternative news sources."
