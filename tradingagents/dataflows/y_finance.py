@@ -435,13 +435,20 @@ def get_yfinance_news(
             return f"# No Recent News Available for {ticker.upper()}\n\nYahoo Finance currently has no news articles available for {ticker}. This could be due to:\n- The ticker symbol being inactive or delisted\n- Yahoo Finance API temporarily unavailable\n- No recent news coverage for this symbol\n\nNote: Yahoo Finance only provides recent news (approximately last 7 days), not historical news."
         
         # Filter out invalid/empty articles
+        # Yahoo Finance now returns nested structure with 'content' field
         valid_articles = []
         for article in news[:15]:  # Check top 15 to get 10 valid ones
-            title = article.get('title', '').strip()
-            timestamp = article.get('providerPublishTime', 0)
+            # Handle both old and new API formats
+            content = article.get('content', article)  # New format has 'content' wrapper
+            
+            title = content.get('title', '').strip()
+            
+            # Handle different date formats
+            pub_date = content.get('pubDate', '')  # New format: ISO string
+            timestamp = content.get('providerPublishTime', 0)  # Old format: Unix timestamp
             
             # Skip articles with no title or invalid timestamp
-            if title and title != 'No title' and timestamp > 0:
+            if title and title != 'No title' and (pub_date or timestamp > 0):
                 valid_articles.append(article)
                 if len(valid_articles) >= 10:
                     break
@@ -451,17 +458,38 @@ def get_yfinance_news(
         
         news_str = ""
         for i, article in enumerate(valid_articles, 1):
+            # Handle both old and new API formats
+            content = article.get('content', article)
+            
             # Convert timestamp to readable date
             try:
-                published = datetime.fromtimestamp(
-                    article.get('providerPublishTime', 0)
-                ).strftime('%Y-%m-%d %H:%M')
+                # Try new format first (ISO string)
+                pub_date = content.get('pubDate', '')
+                if pub_date:
+                    from dateutil import parser
+                    published = parser.parse(pub_date).strftime('%Y-%m-%d %H:%M')
+                else:
+                    # Fall back to old format (Unix timestamp)
+                    timestamp = content.get('providerPublishTime', 0)
+                    published = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
             except:
                 published = "Unknown date"
             
-            title = article.get('title', 'No title')
-            publisher = article.get('publisher', 'Unknown')
-            link = article.get('link', '')
+            title = content.get('title', 'No title')
+            
+            # Handle nested provider structure
+            provider = content.get('provider', {})
+            if isinstance(provider, dict):
+                publisher = provider.get('displayName', 'Unknown')
+            else:
+                publisher = content.get('publisher', 'Unknown')
+            
+            # Handle nested URL structure
+            canonical_url = content.get('canonicalUrl', {})
+            if isinstance(canonical_url, dict):
+                link = canonical_url.get('url', '')
+            else:
+                link = content.get('link', '')
             
             news_str += f"### {i}. {title}\n"
             news_str += f"**Publisher:** {publisher}\n"
@@ -470,7 +498,7 @@ def get_yfinance_news(
                 news_str += f"**Link:** {link}\n"
             
             # Add summary if available
-            summary = article.get('summary', '')
+            summary = content.get('summary', content.get('description', ''))
             if summary:
                 news_str += f"\n{summary}\n\n"
             else:
@@ -523,11 +551,17 @@ def get_yfinance_global_news(
                 
                 # Get top 2 valid articles from each stock
                 for article in news[:5]:  # Check top 5 to get 2 valid ones
-                    title = article.get('title', '').strip()
-                    timestamp = article.get('providerPublishTime', 0)
+                    # Handle both old and new API formats
+                    content = article.get('content', article)  # New format has 'content' wrapper
                     
-                    # Skip invalid articles
-                    if not title or title == 'No title' or timestamp <= 0:
+                    title = content.get('title', '').strip()
+                    
+                    # Handle different date formats
+                    pub_date = content.get('pubDate', '')  # New format: ISO string
+                    timestamp = content.get('providerPublishTime', 0)  # Old format: Unix timestamp
+                    
+                    # Skip invalid articles (must have title and either pubDate or timestamp)
+                    if not title or title == 'No title' or (not pub_date and timestamp <= 0):
                         continue
                     
                     # Deduplicate by title
@@ -572,17 +606,38 @@ Yahoo Finance was unable to provide valid global market news at this time.
         
         news_str = ""
         for i, article in enumerate(all_news[:limit], 1):
+            # Handle both old and new API formats
+            content = article.get('content', article)
+            
             try:
-                published = datetime.fromtimestamp(
-                    article.get('providerPublishTime', 0)
-                ).strftime('%Y-%m-%d %H:%M')
+                # Try new format first (ISO string)
+                pub_date = content.get('pubDate', '')
+                if pub_date:
+                    from dateutil import parser
+                    published = parser.parse(pub_date).strftime('%Y-%m-%d %H:%M')
+                else:
+                    # Fall back to old format (Unix timestamp)
+                    timestamp = content.get('providerPublishTime', 0)
+                    published = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
             except:
                 published = "Unknown date"
             
-            title = article.get('title', 'No title')
+            title = content.get('title', 'No title')
             sector = article.get('sector_source', 'General Market')
-            publisher = article.get('publisher', 'Unknown')
-            link = article.get('link', '')
+            
+            # Handle nested provider structure
+            provider = content.get('provider', {})
+            if isinstance(provider, dict):
+                publisher = provider.get('displayName', 'Unknown')
+            else:
+                publisher = content.get('publisher', 'Unknown')
+            
+            # Handle nested URL structure
+            canonical_url = content.get('canonicalUrl', {})
+            if isinstance(canonical_url, dict):
+                link = canonical_url.get('url', '')
+            else:
+                link = content.get('link', '')
             
             news_str += f"### {i}. {title}\n"
             news_str += f"**Sector:** {sector}\n"
@@ -591,7 +646,7 @@ Yahoo Finance was unable to provide valid global market news at this time.
             if link:
                 news_str += f"**Link:** {link}\n"
             
-            summary = article.get('summary', '')
+            summary = content.get('summary', content.get('description', ''))
             if summary:
                 news_str += f"\n{summary}\n\n"
             else:
