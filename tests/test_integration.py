@@ -65,10 +65,10 @@ def test_full_workflow_google():
         
         print("✓ Graph initialized successfully")
         
-        print("\nRunning propagation for AAPL on 2024-05-10...")
+        print("\nRunning propagation for AAPL on 2025-12-31...")
         print("(This may take a few minutes...)")
         
-        _, decision = ta.propagate("AAPL", "2024-05-10")
+        _, decision = ta.propagate("AAPL", "2025-12-31")
         
         print(f"\n✓ Propagation completed!")
         print(f"Decision: {decision}")
