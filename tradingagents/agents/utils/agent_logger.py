@@ -255,7 +255,7 @@ class AgentLogger:
             if json_file.stem == "00_SUMMARY":
                 continue
             
-            with open(json_file, 'r') as f:
+            with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
             md_file = json_file.with_suffix('.md')
@@ -276,7 +276,7 @@ class AgentLogger:
 </html>
 """
         
-        with open(index_file, 'w') as f:
+        with open(index_file, 'w', encoding='utf-8') as f:
             f.write(html)
 
 
