@@ -1,0 +1,83 @@
+# TradingAgents Logging Configuration
+# Supports different environments and logging configurations
+
+[logging]
+# Global log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = "INFO"
+
+# Log format configuration
+[logging.format]
+console = "%(asctime)s | %(name)-20s | %(levelname)-8s | %(message)s"
+file = "%(asctime)s | %(name)-20s | %(levelname)-8s | %(module)s:%(funcName)s:%(lineno)d | %(message)s"
+structured = "json"
+
+# Handler configuration
+[logging.handlers]
+
+# Console handler
+[logging.handlers.console]
+enabled = true
+colored = true  # Enable colored output
+level = "INFO"
+
+# File handler
+[logging.handlers.file]
+enabled = true
+level = "DEBUG"
+max_size = "10MB"
+backup_count = 5
+directory = "./logs"
+
+# Error log handler (WARNING and above only)
+[logging.handlers.error]
+enabled = true
+level = "WARNING"  # Only log WARNING, ERROR, CRITICAL
+max_size = "10MB"
+backup_count = 5
+directory = "./logs"
+filename = "error.log"
+
+# Structured log handler (JSON format)
+[logging.handlers.structured]
+enabled = false  # Disabled by default, enable in production
+level = "INFO"
+directory = "./logs"
+
+# Specific logger configuration
+[logging.loggers]
+
+# Main application logs
+[logging.loggers.tradingagents]
+level = "INFO"
+
+# Dataflow logs
+[logging.loggers.dataflows]
+level = "INFO"
+
+# Third-party library logs (usually set to WARNING to reduce noise)
+[logging.loggers.urllib3]
+level = "WARNING"
+
+[logging.loggers.requests]
+level = "WARNING"
+
+[logging.loggers.matplotlib]
+level = "WARNING"
+
+[logging.loggers.pandas]
+level = "WARNING"
+
+# Performance monitoring logs
+[logging.performance]
+enabled = true
+log_slow_operations = true
+slow_threshold_seconds = 5.0  # Log operations taking more than 5 seconds
+log_memory_usage = false  # Whether to log memory usage
+
+# Security logs
+[logging.security]
+enabled = true
+log_api_calls = true  # Log API calls
+log_token_usage = true  # Log token usage
+mask_sensitive_data = true  # Mask sensitive data
+

@@ -3,7 +3,9 @@
 import os
 from pathlib import Path
 import json
-from datetime import date
+import uuid
+import time
+from datetime import date, datetime
 from typing import Dict, Any, Tuple, List, Optional
 
 from langchain_openai import ChatOpenAI
@@ -21,6 +23,7 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.dataflows.config import set_config
+from tradingagents.utils.logging_manager import get_logger
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -61,6 +64,11 @@ class TradingAgentsGraph:
         """
         self.debug = debug
         self.config = config or DEFAULT_CONFIG
+        
+        # Initialize logger
+        self.logger = get_logger("tradingagents.graph")
+        self.session_id = str(uuid.uuid4())
+        self.logger.info("Initializing TradingAgentsGraph", extra={'session_id': self.session_id})
 
         # Update the interface's config
         set_config(self.config)
@@ -159,8 +167,20 @@ class TradingAgentsGraph:
 
     def propagate(self, company_name, trade_date):
         """Run the trading agents graph for a company on a specific date."""
-
+        
+        start_time = time.time()
         self.ticker = company_name
+        
+        # Log analysis start
+        self.logger.info(
+            f"🚀 Starting analysis - Stock: {company_name}, Date: {trade_date}",
+            extra={
+                'stock_symbol': company_name,
+                'trade_date': str(trade_date),
+                'session_id': self.session_id,
+                'event_type': 'analysis_start'
+            }
+        )
 
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
@@ -188,6 +208,19 @@ class TradingAgentsGraph:
 
         # Log state
         self._log_state(trade_date, final_state)
+        
+        # Calculate duration and log completion
+        duration = time.time() - start_time
+        self.logger.info(
+            f"✅ Analysis complete - Stock: {company_name}, Duration: {duration:.2f}s",
+            extra={
+                'stock_symbol': company_name,
+                'trade_date': str(trade_date),
+                'session_id': self.session_id,
+                'duration': duration,
+                'event_type': 'analysis_complete'
+            }
+        )
 
         # Return decision and processed signal
         return final_state, self.process_signal(final_state["final_trade_decision"])
@@ -228,11 +261,19 @@ class TradingAgentsGraph:
         directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
         directory.mkdir(parents=True, exist_ok=True)
 
-        with open(
-            f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json",
-            "w",
-        ) as f:
+        log_file = f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json"
+        with open(log_file, "w") as f:
             json.dump(self.log_states_dict, f, indent=4)
+        
+        self.logger.debug(
+            f"Saved state log to {log_file}",
+            extra={
+                'stock_symbol': self.ticker,
+                'trade_date': str(trade_date),
+                'session_id': self.session_id,
+                'log_file': log_file
+            }
+        )
 
     def reflect_and_remember(self, returns_losses):
         """Reflect on decisions and update memory based on returns."""
