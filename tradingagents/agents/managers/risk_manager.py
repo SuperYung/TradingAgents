@@ -1,5 +1,6 @@
 import time
 import json
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_risk_manager(llm, memory):
@@ -44,6 +45,23 @@ Deliverables:
 Focus on actionable insights and continuous improvement. Build on past lessons, critically evaluate all perspectives, and ensure each decision advances better outcomes."""
 
         response = llm.invoke(prompt)
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="risk_manager",
+                system_prompt=prompt[:1000],  # First 1000 chars
+                input_messages=[{"role": "user", "content": prompt}],
+                llm_response=response,
+                tool_calls=[],
+                final_output=str(response.content),
+                metadata={
+                    "company": company_name,
+                    "debate_rounds": risk_debate_state["count"],
+                    "has_past_memories": bool(past_memories)
+                }
+            )
 
         new_risk_debate_state = {
             "judge_decision": response.content,

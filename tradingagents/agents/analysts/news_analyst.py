@@ -3,6 +3,7 @@ import time
 import json
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_news_analyst(llm):
@@ -48,7 +49,38 @@ def create_news_analyst(llm):
         report = ""
 
         if len(result.tool_calls) == 0:
-            report = result.content
+            # Handle both string and list content (Gemini returns list)
+            if isinstance(result.content, list):
+                # Extract text from content blocks
+                report = "".join([
+                    block.get("text", str(block)) if isinstance(block, dict) else str(block)
+                    for block in result.content
+                ])
+            else:
+                report = str(result.content)
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="news_analyst",
+                system_prompt=system_message,
+                input_messages=state.get("messages", []),
+                llm_response=result,
+                tool_calls=[
+                    {
+                        "name": tc.get("name"),
+                        "args": tc.get("args"),
+                        "id": tc.get("id")
+                    } for tc in result.tool_calls
+                ] if hasattr(result, 'tool_calls') and result.tool_calls else [],
+                final_output=report,
+                metadata={
+                    "ticker": ticker,
+                    "trade_date": current_date,
+                    "tools_available": ", ".join([tool.name for tool in tools])
+                }
+            )
 
         return {
             "messages": [result],

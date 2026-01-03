@@ -3,31 +3,44 @@ import os
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
     "results_dir": os.getenv("TRADINGAGENTS_RESULTS_DIR", "./results"),
-    "data_dir": "/Users/yluo/Documents/Code/ScAI/FR1-data",
+    "data_dir": os.getenv("TRADINGAGENTS_DATA_DIR", os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "data"
+    )),
     "data_cache_dir": os.path.join(
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
-    # LLM settings
-    "llm_provider": "openai",
-    "deep_think_llm": "o4-mini",
-    "quick_think_llm": "gpt-4o-mini",
-    "backend_url": "https://api.openai.com/v1",
+    # LLM settings - Default to Google Gemini Pro (free tier)
+    "llm_provider": "google",  # Options: "google", "openai", "anthropic", "ollama"
+    "deep_think_llm": "gemini-2.5-pro",  # Gemini Pro for deep thinking
+    "quick_think_llm": "gemini-2.5-flash",  # Gemini Flash for quick responses
+    "backend_url": "",  # Not needed for Google, set for OpenAI/Ollama
+    # Rate limiting settings
+    "rate_limit_max_retries": 5,
+    "rate_limit_wait_exponential_multiplier": 1,
+    "rate_limit_wait_exponential_max": 60,
+    # Cache settings
+    "cache_ttl_seconds": 3600,  # 1 hour cache TTL
+    "cache_dir": os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
+        "dataflows/cache",
+    ),
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
-    # Data vendor configuration
+    # Data vendor configuration - All free tier
     # Category-level configuration (default for all tools in category)
     "data_vendors": {
-        "core_stock_apis": "yfinance",       # Options: yfinance, alpha_vantage, local
-        "technical_indicators": "yfinance",  # Options: yfinance, alpha_vantage, local
-        "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
-        "news_data": "alpha_vantage",        # Options: openai, alpha_vantage, google, local
+        "core_stock_apis": "yfinance",       # Free: Yahoo Finance
+        "technical_indicators": "yfinance",  # Free: Yahoo Finance
+        "fundamental_data": "yfinance",      # Free: Yahoo Finance
+        "news_data": "yfinance",             # Free: Yahoo Finance (ticker-specific news works best)
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {
-        # Example: "get_stock_data": "alpha_vantage",  # Override category default
-        # Example: "get_news": "openai",               # Override category default
+        # Example: "get_stock_data": "yfinance",
+        # Uncomment below if yfinance global news has issues:
+        # "get_global_news": "google",  # Use Google for global news instead of yfinance
     },
 }

@@ -1,6 +1,7 @@
 import functools
 import time
 import json
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_trader(llm, memory):
@@ -37,9 +38,35 @@ def create_trader(llm, memory):
 
         result = llm.invoke(messages)
 
+        # Handle both string and list content (Gemini returns list)
+        if isinstance(result.content, list):
+            content = "".join([
+                block.get("text", str(block)) if isinstance(block, dict) else str(block)
+                for block in result.content
+            ])
+        else:
+            content = str(result.content)
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="trader",
+                system_prompt=messages[0]["content"] if messages else "",
+                input_messages=messages[1:] if len(messages) > 1 else [],
+                llm_response=result,
+                tool_calls=[],  # Trader doesn't use tools
+                final_output=content,
+                metadata={
+                    "company": company_name,
+                    "investment_plan": investment_plan[:200] + "..." if len(investment_plan) > 200 else investment_plan,
+                    "has_past_memories": bool(past_memories)
+                }
+            )
+
         return {
             "messages": [result],
-            "trader_investment_plan": result.content,
+            "trader_investment_plan": content,
             "sender": name,
         }
 

@@ -4,7 +4,11 @@ from dateutil.relativedelta import relativedelta
 import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils
+from .cache_utils import cached
+from .rate_limit_utils import data_api_rate_limited
 
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited(max_retries=3)
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
@@ -293,6 +297,7 @@ def get_stockstats_indicator(
     return str(indicator_value)
 
 
+@data_api_rate_limited(max_retries=3)
 def get_balance_sheet(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -323,6 +328,7 @@ def get_balance_sheet(
         return f"Error retrieving balance sheet for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_cashflow(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -353,6 +359,7 @@ def get_cashflow(
         return f"Error retrieving cash flow for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_income_statement(
     ticker: Annotated[str, "ticker symbol of the company"],
     freq: Annotated[str, "frequency of data: 'annual' or 'quarterly'"] = "quarterly",
@@ -383,6 +390,7 @@ def get_income_statement(
         return f"Error retrieving income statement for {ticker}: {str(e)}"
 
 
+@data_api_rate_limited(max_retries=3)
 def get_insider_transactions(
     ticker: Annotated[str, "ticker symbol of the company"]
 ):
@@ -405,3 +413,258 @@ def get_insider_transactions(
         
     except Exception as e:
         return f"Error retrieving insider transactions for {ticker}: {str(e)}"
+
+
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited()
+def get_yfinance_news(
+    ticker: Annotated[str, "Ticker symbol"],
+    start_date: Annotated[str, "Start date in yyyy-mm-dd format (not used, kept for compatibility)"],
+    end_date: Annotated[str, "End date in yyyy-mm-dd format (not used, kept for compatibility)"],
+) -> str:
+    """Get recent news for a ticker from Yahoo Finance.
+    
+    Note: Yahoo Finance only provides recent news (last ~7 days), not historical news.
+    If you need historical news for a past date, this will return recent news as context.
+    """
+    try:
+        ticker_obj = yf.Ticker(ticker.upper())
+        news = ticker_obj.news
+        
+        if not news or len(news) == 0:
+            return f"# No Recent News Available for {ticker.upper()}\n\nYahoo Finance currently has no news articles available for {ticker}. This could be due to:\n- The ticker symbol being inactive or delisted\n- Yahoo Finance API temporarily unavailable\n- No recent news coverage for this symbol\n\nNote: Yahoo Finance only provides recent news (approximately last 7 days), not historical news."
+        
+        # Filter out invalid/empty articles
+        # Yahoo Finance now returns nested structure with 'content' field
+        valid_articles = []
+        for article in news[:15]:  # Check top 15 to get 10 valid ones
+            # Handle both old and new API formats
+            content = article.get('content', article)  # New format has 'content' wrapper
+            
+            title = content.get('title', '').strip()
+            
+            # Handle different date formats
+            pub_date = content.get('pubDate', '')  # New format: ISO string
+            timestamp = content.get('providerPublishTime', 0)  # Old format: Unix timestamp
+            
+            # Skip articles with no title or invalid timestamp
+            if title and title != 'No title' and (pub_date or timestamp > 0):
+                valid_articles.append(article)
+                if len(valid_articles) >= 10:
+                    break
+        
+        if not valid_articles:
+            return f"# No Valid News Found for {ticker.upper()}\n\nYahoo Finance returned news articles but they appear to be malformed or empty. This may indicate:\n- Data quality issues with Yahoo Finance API\n- Historical date requested (Yahoo Finance only provides recent news)\n- Temporary API issues\n\nConsider using an alternative news source for historical analysis."
+        
+        news_str = ""
+        for i, article in enumerate(valid_articles, 1):
+            # Handle both old and new API formats
+            content = article.get('content', article)
+            
+            # Convert timestamp to readable date
+            try:
+                # Try new format first (ISO string)
+                pub_date = content.get('pubDate', '')
+                if pub_date:
+                    from dateutil import parser
+                    published = parser.parse(pub_date).strftime('%Y-%m-%d %H:%M')
+                else:
+                    # Fall back to old format (Unix timestamp)
+                    timestamp = content.get('providerPublishTime', 0)
+                    published = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+            except:
+                published = "Unknown date"
+            
+            title = content.get('title', 'No title')
+            
+            # Handle nested provider structure
+            provider = content.get('provider', {})
+            if isinstance(provider, dict):
+                publisher = provider.get('displayName', 'Unknown')
+            else:
+                publisher = content.get('publisher', 'Unknown')
+            
+            # Handle nested URL structure
+            canonical_url = content.get('canonicalUrl', {})
+            if isinstance(canonical_url, dict):
+                link = canonical_url.get('url', '')
+            else:
+                link = content.get('link', '')
+            
+            news_str += f"### {i}. {title}\n"
+            news_str += f"**Publisher:** {publisher}\n"
+            news_str += f"**Published:** {published}\n"
+            if link:
+                news_str += f"**Link:** {link}\n"
+            
+            # Add summary if available
+            summary = content.get('summary', content.get('description', ''))
+            if summary:
+                news_str += f"\n{summary}\n\n"
+            else:
+                news_str += f"\n*No summary available.*\n\n"
+        
+        header = f"# Recent News for {ticker.upper()}\n"
+        header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"# Total valid articles: {len(valid_articles)}\n"
+        header += f"# Note: Yahoo Finance only provides recent news (~7 days), not historical news\n\n"
+        
+        return header + news_str
+        
+    except Exception as e:
+        return f"# Error Fetching News for {ticker.upper()}\n\n**Error:** {str(e)}\n\nYahoo Finance news may be temporarily unavailable. Consider using alternative news sources."
+
+
+@cached(ttl_seconds=3600)  # Cache for 1 hour
+@data_api_rate_limited()
+def get_yfinance_global_news(
+    curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    look_back_days: Annotated[int, "Number of days to look back (not used)"] = 7,
+    limit: Annotated[int, "Maximum number of articles to return"] = 5,
+) -> str:
+    """Get general market news from major stocks via Yahoo Finance.
+    
+    Uses major market-moving stocks as proxies for global market news.
+    Note: Yahoo Finance only provides recent news (~7 days), not historical news.
+    """
+    try:
+        # Use major market-moving stocks as proxies for global news
+        proxy_stocks = {
+            'AAPL': 'Apple/Tech',
+            'MSFT': 'Microsoft/Tech',
+            'TSLA': 'Tesla/EV',
+            'JPM': 'JPMorgan/Finance',
+            'XOM': 'Exxon/Energy'
+        }
+        
+        all_news = []
+        seen_titles = set()
+        errors = []
+        
+        for ticker_symbol, sector in proxy_stocks.items():
+            try:
+                ticker_obj = yf.Ticker(ticker_symbol)
+                news = ticker_obj.news
+                
+                if not news or len(news) == 0:
+                    continue
+                
+                # Get top 2 valid articles from each stock
+                for article in news[:5]:  # Check top 5 to get 2 valid ones
+                    # Handle both old and new API formats
+                    content = article.get('content', article)  # New format has 'content' wrapper
+                    
+                    title = content.get('title', '').strip()
+                    
+                    # Handle different date formats
+                    pub_date = content.get('pubDate', '')  # New format: ISO string
+                    timestamp = content.get('providerPublishTime', 0)  # Old format: Unix timestamp
+                    
+                    # Skip invalid articles (must have title and either pubDate or timestamp)
+                    if not title or title == 'No title' or (not pub_date and timestamp <= 0):
+                        continue
+                    
+                    # Deduplicate by title
+                    if title and title not in seen_titles:
+                        seen_titles.add(title)
+                        article['sector_source'] = sector
+                        all_news.append(article)
+                        
+                        if len(all_news) >= limit:
+                            break
+            except Exception as e:
+                errors.append(f"{ticker_symbol}: {str(e)}")
+                continue
+            
+            if len(all_news) >= limit:
+                break
+        
+        # If we couldn't get any valid news
+        if not all_news:
+            error_details = "\n".join(errors) if errors else "No specific errors recorded"
+            return f"""# Global Market News - No Valid Data Available
+
+Yahoo Finance was unable to provide valid global market news at this time.
+
+**Attempted sources:** {', '.join(proxy_stocks.keys())}
+
+**Possible reasons:**
+- Yahoo Finance only provides recent news (~7 days), not historical news
+- Historical date requested (requested: {curr_date})
+- Data quality issues with Yahoo Finance API
+- Temporary API unavailability
+- All returned articles were malformed or empty
+
+**Recommendation:** For historical analysis (dates more than 7 days old), consider:
+1. Using Google News scraping (set `tool_vendors = {{"get_global_news": "google"}}` in config)
+2. Using alternative news APIs (NewsAPI, Finnhub)
+3. Using cached/local news data for the historical period
+
+**Debug info:**
+{error_details}
+"""
+        
+        news_str = ""
+        for i, article in enumerate(all_news[:limit], 1):
+            # Handle both old and new API formats
+            content = article.get('content', article)
+            
+            try:
+                # Try new format first (ISO string)
+                pub_date = content.get('pubDate', '')
+                if pub_date:
+                    from dateutil import parser
+                    published = parser.parse(pub_date).strftime('%Y-%m-%d %H:%M')
+                else:
+                    # Fall back to old format (Unix timestamp)
+                    timestamp = content.get('providerPublishTime', 0)
+                    published = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+            except:
+                published = "Unknown date"
+            
+            title = content.get('title', 'No title')
+            sector = article.get('sector_source', 'General Market')
+            
+            # Handle nested provider structure
+            provider = content.get('provider', {})
+            if isinstance(provider, dict):
+                publisher = provider.get('displayName', 'Unknown')
+            else:
+                publisher = content.get('publisher', 'Unknown')
+            
+            # Handle nested URL structure
+            canonical_url = content.get('canonicalUrl', {})
+            if isinstance(canonical_url, dict):
+                link = canonical_url.get('url', '')
+            else:
+                link = content.get('link', '')
+            
+            news_str += f"### {i}. {title}\n"
+            news_str += f"**Sector:** {sector}\n"
+            news_str += f"**Publisher:** {publisher}\n"
+            news_str += f"**Published:** {published}\n"
+            if link:
+                news_str += f"**Link:** {link}\n"
+            
+            summary = content.get('summary', content.get('description', ''))
+            if summary:
+                news_str += f"\n{summary}\n\n"
+            else:
+                news_str += f"\n*No summary available.*\n\n"
+        
+        header = f"# Global Market News\n"
+        header += f"# Retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"# Source: Major market-moving stocks across sectors\n"
+        header += f"# Total valid articles: {len(all_news[:limit])}\n"
+        header += f"# Note: Yahoo Finance only provides recent news (~7 days)\n\n"
+        
+        return header + news_str
+        
+    except Exception as e:
+        return f"""# Global Market News - Error
+
+**Error:** {str(e)}
+
+Yahoo Finance news may be temporarily unavailable.
+
+**Note:** Yahoo Finance only provides recent news (approximately last 7 days), not historical news. If analyzing a historical date, consider using alternative news sources."""

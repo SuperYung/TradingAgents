@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage
 import time
 import json
+from tradingagents.agents.utils.agent_logger import get_agent_logger
 
 
 def create_bear_researcher(llm, memory):
@@ -47,6 +48,23 @@ Use this information to deliver a compelling bear argument, refute the bull's cl
         response = llm.invoke(prompt)
 
         argument = f"Bear Analyst: {response.content}"
+        
+        # Log the interaction for study
+        logger = get_agent_logger()
+        if logger:
+            logger.log_agent_interaction(
+                agent_name="bear_researcher",
+                system_prompt=prompt[:1000],  # First 1000 chars of prompt
+                input_messages=[{"role": "user", "content": prompt}],
+                llm_response=response,
+                tool_calls=[],
+                final_output=argument,
+                metadata={
+                    "debate_round": investment_debate_state["count"],
+                    "responding_to": "bull" if current_response else "initial",
+                    "has_past_memories": bool(past_memories)
+                }
+            )
 
         new_investment_debate_state = {
             "history": history + "\n" + argument,

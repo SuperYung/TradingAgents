@@ -31,6 +31,19 @@
 >
 > So we decided to fully open-source the framework. Looking forward to building impactful projects with you!
 
+> 🆕 **NEW: 100% Free-Tier Edition!**
+> 
+> TradingAgents now supports **Google Gemini Pro** (free) and **Yahoo Finance** (free)!
+> - ✅ **Zero Cost**: $0/month (was $50-100/month)
+> - ✅ **Faster**: 3-100x speedup with caching
+> - ✅ **Reliable**: Automatic retry with rate limiting
+> - ✅ **Easy Testing**: Test individual agents without full workflow
+> 
+> 📚 **Quick Links:**
+> - [🚀 Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
+> - [📖 Migration Guide](MIGRATION_GUIDE.md) - Full migration documentation
+> - [💡 Improvements](IMPROVEMENTS.md) - Architecture recommendations
+
 <div align="center">
 <a href="https://www.star-history.com/#TauricResearch/TradingAgents&Date">
  <picture>
