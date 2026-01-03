@@ -1,0 +1,45 @@
+# TradingAgents Data Sources Configuration
+# Configure multiple data providers with priority-based fallback
+
+# Yahoo Finance Provider (Priority: 1 - Primary)
+[providers.yfinance]
+enabled = true
+priority = 1
+cache_ttl = 3600  # 1 hour cache
+description = "Free, reliable, no API key required"
+
+# Google Provider (Priority: 2 - Secondary)
+[providers.google]
+enabled = true
+priority = 2
+cache_ttl = 3600
+api_key_env = "GOOGLE_API_KEY"  # Optional, for advanced features
+description = "Good for news and real-time quotes"
+
+# Alpha Vantage Provider (Priority: 3 - Tertiary)
+[providers.alphavantage]
+enabled = true  # Set to false if no API key
+priority = 3
+cache_ttl = 3600
+api_key_env = "ALPHA_VANTAGE_API_KEY"  # Required
+rate_limit_delay = 12.0  # 12 seconds (5 calls/minute)
+description = "Comprehensive data but rate limited"
+
+# Global Settings
+[settings]
+default_timeout = 30  # Request timeout in seconds
+retry_attempts = 3  # Number of retry attempts
+retry_delay = 1.0  # Delay between retries in seconds
+
+# Caching
+[caching]
+enabled = true
+default_ttl = 3600  # Default cache TTL in seconds
+max_cache_size = 1000  # Maximum number of cached items
+
+# Logging
+[logging]
+log_provider_selection = true
+log_fallback_attempts = true
+log_cache_hits = true
+
