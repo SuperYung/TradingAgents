@@ -9,6 +9,20 @@ import os
 from typing import Optional
 from pathlib import Path
 
+# Auto-load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Find .env in project root (3 levels up from this file)
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        logging.debug(f"Loaded environment from {env_path}")
+except ImportError:
+    # python-dotenv not installed, will use system environment variables
+    logging.debug("python-dotenv not available, using system environment variables")
+except Exception as e:
+    logging.debug(f"Could not load .env file: {e}")
+
 logger = logging.getLogger(__name__)
 
 

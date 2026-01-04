@@ -19,6 +19,7 @@ requests
 tqdm
 pytz
 redis
+python-dotenv
 chainlit
 rich
 questionary
