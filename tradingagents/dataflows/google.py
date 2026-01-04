@@ -28,3 +28,29 @@ def get_google_news(
         return ""
 
     return f"## {query} Google News, from {before} to {curr_date}:\n\n{news_str}"
+
+def get_global_news_google(
+    curr_date: str,
+    look_back_days: int = 7,
+    limit: int = 5,
+) -> str:
+    """Get global macroeconomic news using Google News"""
+    # Use generic macroeconomic search terms
+    queries = [
+        "economy",
+        "federal reserve",
+        "stock market",
+        "inflation",
+        "interest rates"
+    ]
+    
+    all_news = []
+    for query in queries:
+        news = get_google_news(query, curr_date, look_back_days)
+        if news:
+            all_news.append(news)
+    
+    if not all_news:
+        return "No global news found"
+    
+    return "\n\n---\n\n".join(all_news[:limit])    

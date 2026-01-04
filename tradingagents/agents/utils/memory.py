@@ -1,6 +1,7 @@
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
+import os
 
 
 class FinancialSituationMemory:
@@ -10,8 +11,21 @@ class FinancialSituationMemory:
         else:
             self.embedding = "text-embedding-3-small"
         self.client = OpenAI(base_url=config["backend_url"])
-        self.chroma_client = chromadb.Client(Settings(allow_reset=True))
-        self.situation_collection = self.chroma_client.create_collection(name=name)
+        
+        # Create a dedicated ChromaDB directory in the project root
+        chroma_path = os.path.join(
+            config["project_dir"], 
+            "chroma_db"  # Separate directory for ChromaDB
+        )
+        os.makedirs(chroma_path, exist_ok=True)
+        
+        # Use persistent client with explicit path
+        self.chroma_client = chromadb.PersistentClient(
+            path=chroma_path,
+            settings=Settings(allow_reset=True)
+        )
+        # Use get_or_create to avoid errors on subsequent runs
+        self.situation_collection = self.chroma_client.get_or_create_collection(name=name)
 
     def get_embedding(self, text):
         """Get OpenAI embedding for a text"""
