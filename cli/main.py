@@ -797,9 +797,11 @@ def run_analysis():
         def wrapper(*args, **kwargs):
             func(*args, **kwargs)
             timestamp, message_type, content = obj.messages[-1]
-            content = content.replace("\n", " ")  # Replace newlines with spaces
-            with open(log_file, "a") as f:
-                f.write(f"{timestamp} [{message_type}] {content}\n")
+            # Extract text if content is in list format
+            content_str = extract_content_string(content)
+            content_str = content_str.replace("\n", " ")  # Replace newlines with spaces
+            with open(log_file, "a", encoding='utf-8') as f:
+                f.write(f"{timestamp} [{message_type}] {content_str}\n")
         return wrapper
     
     def save_tool_call_decorator(obj, func_name):
@@ -809,7 +811,7 @@ def run_analysis():
             func(*args, **kwargs)
             timestamp, tool_name, args = obj.tool_calls[-1]
             args_str = ", ".join(f"{k}={v}" for k, v in args.items())
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding='utf-8') as f:
                 f.write(f"{timestamp} [Tool Call] {tool_name}({args_str})\n")
         return wrapper
 
