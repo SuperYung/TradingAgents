@@ -10,3 +10,4 @@ eval_data/
 *.egg-info/
 .env
 logs/
+chroma_db/
