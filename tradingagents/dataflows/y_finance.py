@@ -4,6 +4,12 @@ from dateutil.relativedelta import relativedelta
 import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils
+from tradingagents.dataflows.cache import get_cache
+from tradingagents.utils.logging_manager import get_logger
+
+# Initialize cache and logger
+cache = get_cache()
+logger = get_logger("tradingagents.dataflows.yfinance")
 
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -14,17 +20,30 @@ def get_YFin_data_online(
     datetime.strptime(start_date, "%Y-%m-%d")
     datetime.strptime(end_date, "%Y-%m-%d")
 
+    # Try cache first
+    cached_data = cache.get(
+        'historical_data',
+        symbol=symbol.upper(),
+        start_date=start_date,
+        end_date=end_date,
+        vendor='yfinance'
+    )
+    
+    if cached_data is not None:
+        logger.debug(f"✅ Cache HIT: {symbol} {start_date} to {end_date}")
+        return cached_data
+
     # Create ticker object
     ticker = yf.Ticker(symbol.upper())
 
     # Fetch historical data for the specified date range
+    logger.debug(f"🌐 API Request: {symbol} {start_date} to {end_date}")
     data = ticker.history(start=start_date, end=end_date)
 
     # Check if data is empty
     if data.empty:
-        return (
-            f"No data found for symbol '{symbol}' between {start_date} and {end_date}"
-        )
+        error_msg = f"No data found for symbol '{symbol}' between {start_date} and {end_date}"
+        return error_msg
 
     # Remove timezone info from index for cleaner output
     if data.index.tz is not None:
@@ -44,7 +63,20 @@ def get_YFin_data_online(
     header += f"# Total records: {len(data)}\n"
     header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
 
-    return header + csv_string
+    result = header + csv_string
+    
+    # Cache the result
+    cache.set(
+        'historical_data',
+        result,
+        symbol=symbol.upper(),
+        start_date=start_date,
+        end_date=end_date,
+        vendor='yfinance'
+    )
+    logger.debug(f"💾 Cached: {symbol} {start_date} to {end_date}")
+
+    return result
 
 def get_stock_stats_indicators_window(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -54,6 +86,20 @@ def get_stock_stats_indicators_window(
     ],
     look_back_days: Annotated[int, "how many days to look back"],
 ) -> str:
+    
+    # Try cache first
+    cached_data = cache.get(
+        'indicators',
+        symbol=symbol.upper(),
+        indicator=indicator,
+        curr_date=curr_date,
+        look_back_days=look_back_days,
+        vendor='yfinance'
+    )
+    
+    if cached_data is not None:
+        logger.debug(f"✅ Cache HIT: {symbol} {indicator} {curr_date}")
+        return cached_data
 
     best_ind_params = {
         # Moving Averages
@@ -180,6 +226,18 @@ def get_stock_stats_indicators_window(
         + "\n\n"
         + best_ind_params.get(indicator, "No description available.")
     )
+
+    # Cache the result
+    cache.set(
+        'indicators',
+        result_str,
+        symbol=symbol.upper(),
+        indicator=indicator,
+        curr_date=curr_date,
+        look_back_days=look_back_days,
+        vendor='yfinance'
+    )
+    logger.debug(f"💾 Cached: {symbol} {indicator} {curr_date}")
 
     return result_str
 

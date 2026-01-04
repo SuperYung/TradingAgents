@@ -11,3 +11,11 @@ eval_data/
 .env
 logs/
 chroma_db/
+
+# Cache directories (root level)
+cache_data/
+data/analysis_results/
+data/mongodb_backup/
+
+# Legacy cache
+dataflows/data_cache/

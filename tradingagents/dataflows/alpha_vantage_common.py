@@ -2,12 +2,17 @@ import os
 import requests
 import pandas as pd
 import json
+import hashlib
 from datetime import datetime
 from io import StringIO
 from tradingagents.utils.logging_manager import get_logger
+from tradingagents.dataflows.cache import get_cache
 
 # Initialize logger
 logger = get_logger("tradingagents.dataflows.alpha_vantage")
+
+# Initialize cache
+cache = get_cache()
 
 API_BASE_URL = "https://www.alphavantage.co/query"
 
@@ -43,12 +48,46 @@ class AlphaVantageRateLimitError(Exception):
     """Exception raised when Alpha Vantage API rate limit is exceeded."""
     pass
 
-def _make_api_request(function_name: str, params: dict) -> dict | str:
-    """Helper function to make API requests and handle responses.
+def _make_api_request(function_name: str, params: dict, use_cache: bool = True) -> dict | str:
+    """Helper function to make API requests and handle responses with caching.
+    
+    Args:
+        function_name: Alpha Vantage API function name
+        params: API parameters
+        use_cache: Whether to use cache (default: True)
     
     Raises:
         AlphaVantageRateLimitError: When API rate limit is exceeded
+    
+    Returns:
+        API response (JSON or CSV string)
     """
+    # Determine data type for cache
+    data_type_map = {
+        'TIME_SERIES_DAILY_ADJUSTED': 'historical_data',
+        'TIME_SERIES_INTRADAY': 'stock_quote',
+        'OVERVIEW': 'fundamentals',
+        'BALANCE_SHEET': 'balance_sheet',
+        'INCOME_STATEMENT': 'income_statement',
+        'CASH_FLOW': 'cashflow',
+        'NEWS_SENTIMENT': 'news',
+    }
+    data_type = data_type_map.get(function_name, 'stock_quote')
+    
+    # Try cache first
+    if use_cache:
+        # Generate cache parameters (exclude API key for security)
+        cache_params = {
+            'function': function_name,
+            'vendor': 'alpha_vantage',
+            **{k: v for k, v in params.items() if k != 'apikey'}
+        }
+        
+        cached_data = cache.get(data_type, **cache_params)
+        if cached_data is not None:
+            logger.debug(f"✅ Cache HIT: {function_name} {params.get('symbol', '')}")
+            return cached_data
+    
     # Create a copy of params to avoid modifying the original
     api_params = params.copy()
     api_params.update({
@@ -67,6 +106,7 @@ def _make_api_request(function_name: str, params: dict) -> dict | str:
         # Remove entitlement if it's None or empty
         api_params.pop("entitlement", None)
     
+    logger.debug(f"🌐 API Request: {function_name} {params.get('symbol', '')}")
     response = requests.get(API_BASE_URL, params=api_params)
     response.raise_for_status()
 
@@ -80,9 +120,30 @@ def _make_api_request(function_name: str, params: dict) -> dict | str:
             info_message = response_json["Information"]
             if "rate limit" in info_message.lower() or "api key" in info_message.lower():
                 raise AlphaVantageRateLimitError(f"Alpha Vantage rate limit exceeded: {info_message}")
+        
+        # Cache valid JSON response
+        if use_cache:
+            cache_params = {
+                'function': function_name,
+                'vendor': 'alpha_vantage',
+                **{k: v for k, v in params.items() if k != 'apikey'}
+            }
+            cache.set(data_type, response_json, **cache_params)
+            logger.debug(f"💾 Cached: {function_name} {params.get('symbol', '')}")
+        
+        return response_json
+        
     except json.JSONDecodeError:
         # Response is not JSON (likely CSV data), which is normal
-        pass
+        # Cache CSV response
+        if use_cache:
+            cache_params = {
+                'function': function_name,
+                'vendor': 'alpha_vantage',
+                **{k: v for k, v in params.items() if k != 'apikey'}
+            }
+            cache.set(data_type, response_text, **cache_params)
+            logger.debug(f"💾 Cached: {function_name} {params.get('symbol', '')}")
 
     return response_text
 
