@@ -4,14 +4,16 @@ Helps debug cache hit/miss issues by inspecting Redis keys
 """
 
 import sys
+import os
 from pathlib import Path
+import json
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add project root to path (go up 3 levels from this file to reach project root)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from tradingagents.config import get_redis_manager
 from tradingagents.dataflows.cache import get_cache
-import json
 
 
 def inspect_redis_keys():
@@ -143,16 +145,18 @@ def main():
         epilog="""
 Examples:
   # Inspect all Redis keys
-  python tradingagents/utils/cache_debug.py --inspect
+  python -m tradingagents.utils.cache_debug --inspect
   
   # Compare cache operations
-  python tradingagents/utils/cache_debug.py --compare
+  python -m tradingagents.utils.cache_debug --compare
   
   # Clear Redis cache
-  python tradingagents/utils/cache_debug.py --clear
+  python -m tradingagents.utils.cache_debug --clear
   
   # Run all diagnostics
-  python tradingagents/utils/cache_debug.py --all
+  python -m tradingagents.utils.cache_debug --all
+
+Note: Run from project root directory
 """
     )
     

@@ -13,8 +13,11 @@ LOG_LEVEL=DEBUG
 ## Step 2: Run Diagnostic Tool
 
 ```bash
+# Make sure you're in the project root directory
+cd /path/to/TradingAgents
+
 # Check current cache state
-python tradingagents/utils/cache_debug.py --compare
+python -m tradingagents.utils.cache_debug --compare
 ```
 
 **What to look for**:
@@ -24,7 +27,7 @@ python tradingagents/utils/cache_debug.py --compare
 
 ```bash
 # See all cached keys and their details
-python tradingagents/utils/cache_debug.py --inspect
+python -m tradingagents.utils.cache_debug --inspect
 ```
 
 This shows:
@@ -77,7 +80,7 @@ After identifying the issue:
 
 ```bash
 # Clear Redis to start fresh
-python tradingagents/utils/cache_debug.py --clear
+python -m tradingagents.utils.cache_debug --clear
 
 # Run analysis again
 python cli/main.py
@@ -118,16 +121,16 @@ Then check stats:
 # Edit .env: LOG_LEVEL=DEBUG
 
 # 2. Check current state
-python tradingagents/utils/cache_debug.py --compare
+python -m tradingagents.utils.cache_debug --compare
 
 # 3. Inspect keys
-python tradingagents/utils/cache_debug.py --inspect
+python -m tradingagents.utils.cache_debug --inspect
 
 # 4. Run analysis (watch for key mismatches in logs)
 python cli/main.py
 
 # 5. Clear cache if needed
-python tradingagents/utils/cache_debug.py --clear
+python -m tradingagents.utils.cache_debug --clear
 
 # 6. Check stats
 python -m tradingagents.utils.cache_monitor --stats
