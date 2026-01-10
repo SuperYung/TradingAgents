@@ -17,6 +17,14 @@ DEFAULT_CONFIG = {
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
+    # MongoDB configuration
+    "mongodb_enabled": os.getenv("MONGODB_ENABLED", "false").lower() == "true",
+    "mongodb_host": os.getenv("MONGODB_HOST", "localhost"),
+    "mongodb_port": int(os.getenv("MONGODB_PORT", "27017")),
+    "mongodb_database": os.getenv("MONGODB_DATABASE", "tradingagents"),
+    "mongodb_save_analyses": os.getenv("MONGODB_SAVE_ANALYSES", "true").lower() == "true",
+    "mongodb_save_news": os.getenv("MONGODB_SAVE_NEWS", "true").lower() == "true",
+    "mongodb_track_usage": os.getenv("MONGODB_TRACK_USAGE", "true").lower() == "true",
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
     "data_vendors": {

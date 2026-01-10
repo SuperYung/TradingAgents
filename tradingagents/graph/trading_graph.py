@@ -24,6 +24,7 @@ from tradingagents.agents.utils.agent_states import (
 )
 from tradingagents.dataflows.config import set_config
 from tradingagents.utils.logging_manager import get_logger
+from tradingagents.dataflows.mongodb.analysis_repository import AnalysisRepository
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -221,6 +222,9 @@ class TradingAgentsGraph:
                 'event_type': 'analysis_complete'
             }
         )
+        
+        # Save to MongoDB if enabled
+        self._save_to_mongodb(company_name, trade_date, final_state, duration)
 
         # Return decision and processed signal
         return final_state, self.process_signal(final_state["final_trade_decision"])
@@ -274,6 +278,102 @@ class TradingAgentsGraph:
                 'log_file': log_file
             }
         )
+    
+    def _save_to_mongodb(self, company_name: str, trade_date: str, final_state: Dict, duration: float):
+        """Save analysis results to MongoDB if enabled"""
+        if not DEFAULT_CONFIG.get('mongodb_enabled') or not DEFAULT_CONFIG.get('mongodb_save_analyses'):
+            return
+        
+        try:
+            # Initialize repository
+            repo = AnalysisRepository()
+            if not repo.collection:
+                self.logger.debug("MongoDB not available, skipping analysis save")
+                return
+            
+            # Generate analysis ID
+            analysis_id = f"{company_name}_{trade_date}_{int(time.time())}"
+            
+            # Extract decision from final trade decision text
+            decision_text = final_state.get('final_trade_decision', '')
+            action = 'HOLD'  # default
+            if 'BUY' in decision_text.upper():
+                action = 'BUY'
+            elif 'SELL' in decision_text.upper():
+                action = 'SELL'
+            
+            # Build analysis document
+            analysis_data = {
+                'analysis_id': analysis_id,
+                'symbol': company_name.upper(),
+                'stock_name': company_name,  # Could be enriched with actual company name
+                'market_type': 'US',  # US stocks
+                'analysis_date': trade_date,
+                'timestamp': datetime.utcnow(),
+                'status': 'completed',
+                
+                # Analysis configuration
+                'analysts': self._get_selected_analysts(final_state),
+                'research_depth': DEFAULT_CONFIG.get('max_debate_rounds', 1),
+                'llm_config': {
+                    'provider': DEFAULT_CONFIG.get('llm_provider', 'unknown'),
+                    'quick_think': DEFAULT_CONFIG.get('quick_think_llm', 'unknown'),
+                    'deep_think': DEFAULT_CONFIG.get('deep_think_llm', 'unknown')
+                },
+                
+                # Reports from each agent/phase
+                'reports': {
+                    'market_report': final_state.get('market_report', ''),
+                    'fundamentals_report': final_state.get('fundamentals_report', ''),
+                    'news_report': final_state.get('news_report', ''),
+                    'sentiment_report': final_state.get('sentiment_report', ''),
+                    'investment_plan': final_state.get('investment_plan', ''),
+                    'trader_investment_plan': final_state.get('trader_investment_plan', ''),
+                    'final_trade_decision': decision_text
+                },
+                
+                # Structured decision
+                'decision': {
+                    'action': action,
+                    'confidence': 0.75,  # Could be extracted from decision text
+                    'reasoning': decision_text[:500] if decision_text else '',  # First 500 chars
+                },
+                
+                # Summary and recommendation
+                'summary': f"Analysis of {company_name} for {trade_date}",
+                'recommendation': action,
+                'risk_level': 'Medium',  # Could be extracted from risk analysis
+                
+                # Performance metrics
+                'execution_time': duration,
+                'session_id': self.session_id,
+                
+                # Source
+                'source': 'cli',
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
+            
+            # Save to MongoDB
+            if repo.save_analysis(analysis_data):
+                self.logger.info(f"📊 Analysis saved to MongoDB: {analysis_id}")
+            
+        except Exception as e:
+            # Non-critical error - don't fail the analysis
+            self.logger.warning(f"Failed to save analysis to MongoDB: {e}")
+    
+    def _get_selected_analysts(self, final_state: Dict) -> List[str]:
+        """Extract list of analysts that participated in the analysis"""
+        analysts = []
+        if final_state.get('market_report'):
+            analysts.append('Market Analyst')
+        if final_state.get('fundamentals_report'):
+            analysts.append('Fundamentals Analyst')
+        if final_state.get('news_report'):
+            analysts.append('News Analyst')
+        if final_state.get('sentiment_report'):
+            analysts.append('Sentiment Analyst')
+        return analysts
 
     def reflect_and_remember(self, returns_losses):
         """Reflect on decisions and update memory based on returns."""
