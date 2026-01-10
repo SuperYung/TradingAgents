@@ -83,12 +83,10 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
             **{k: v for k, v in params.items() if k != 'apikey'}
         }
         
-        logger.debug(f"🔎 Alpha Vantage GET - Function: {function_name}, Params: {cache_params}")
         cached_data = cache.get(data_type, **cache_params)
         if cached_data is not None:
-            logger.info(f"✅ Cache HIT: {function_name} {params.get('symbol', '')}")
+            logger.debug(f"Cache HIT: {function_name} {params.get('symbol', '')}")
             return cached_data
-        logger.debug(f"❌ Cache MISS: {function_name} - will fetch from API")
     
     # Create a copy of params to avoid modifying the original
     api_params = params.copy()
@@ -130,9 +128,8 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
                 'vendor': 'alpha_vantage',
                 **{k: v for k, v in params.items() if k != 'apikey'}
             }
-            logger.debug(f"💾 Alpha Vantage SET - Function: {function_name}, Params: {cache_params}")
             cache.set(data_type, response_json, **cache_params)
-            logger.info(f"✅ Cached JSON: {function_name} {params.get('symbol', '')}")
+            logger.debug(f"Cached: {function_name} {params.get('symbol', '')}")
         
         return response_json
         
@@ -145,9 +142,8 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
                 'vendor': 'alpha_vantage',
                 **{k: v for k, v in params.items() if k != 'apikey'}
             }
-            logger.debug(f"💾 Alpha Vantage SET - Function: {function_name}, Params: {cache_params}")
             cache.set(data_type, response_text, **cache_params)
-            logger.info(f"✅ Cached CSV: {function_name} {params.get('symbol', '')}")
+            logger.debug(f"Cached: {function_name} {params.get('symbol', '')}")
 
     return response_text
 

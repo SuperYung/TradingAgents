@@ -77,10 +77,7 @@ class IntegratedCache:
             key_parts.append(f"{k}={v}")
         
         key_string = ":".join(key_parts)
-        
-        # Debug logging to track key generation
-        logger.debug(f"🔑 Generated cache key: {key_string}")
-        logger.debug(f"   Params: {sorted(params.items())}")
+        logger.debug(f"Cache key: {key_string}")
         
         return key_string
     
@@ -113,16 +110,14 @@ class IntegratedCache:
         if self.redis:
             try:
                 redis_key = self._generate_redis_key(cache_key)
-                logger.debug(f"🔍 Looking up Redis key: {redis_key}")
                 cached_json = self.redis.get(redis_key)
                 
                 if cached_json:
                     self.stats['redis_hits'] += 1
-                    logger.info(f"✅ Redis HIT: {data_type} {params}")
+                    logger.debug(f"✅ Redis HIT: {data_type}")
                     return json.loads(cached_json)
                 else:
                     self.stats['redis_misses'] += 1
-                    logger.debug(f"❌ Redis MISS: {redis_key} not found")
                     
             except Exception as e:
                 logger.warning(f"Redis get error: {e}")
@@ -194,14 +189,12 @@ class IntegratedCache:
             redis_key = self._generate_redis_key(cache_key)
             ttl = self.config.get_ttl(data_type)
             
-            logger.debug(f"💾 Storing in Redis key: {redis_key} (TTL: {ttl}s)")
-            
             self.redis.setex(
                 redis_key,
                 ttl,
                 json.dumps(data, default=str)
             )
-            logger.info(f"✅ Redis SET successful: {data_type}")
+            logger.debug(f"💾 Redis SET: {data_type} (TTL: {ttl}s)")
             return True
         except Exception as e:
             logger.warning(f"Redis set error: {e}")

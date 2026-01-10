@@ -97,23 +97,26 @@ def compare_cache_operations():
     cache = get_cache()
     stats = cache.get_stats()
     
-    print(f"\n📊 Cache Statistics:")
+    print(f"\n📊 Cache Statistics (Current Process):")
     print(f"   Total Requests: {stats['overall']['total_requests']}")
     print(f"   Redis Available: {stats['redis']['available']}")
     print(f"   Redis Keys: {stats['redis'].get('keys', 0)}")
     print(f"   Redis Hits: {stats['redis']['hits']}")
     print(f"   Redis Misses: {stats['redis']['misses']}")
     
-    if stats['redis'].get('keys', 0) > 0 and stats['redis']['hits'] == 0:
-        print("\n⚠️  WARNING: Keys exist but no hits!")
-        print("   This indicates a cache key mismatch between SET and GET operations.")
-        print("\n💡 Recommendations:")
-        print("   1. Enable DEBUG logging: Set LOG_LEVEL=DEBUG in .env")
-        print("   2. Run your analysis again")
-        print("   3. Compare the cache keys in logs:")
-        print("      - Look for '🔎 Alpha Vantage GET' lines")
-        print("      - Look for '💾 Alpha Vantage SET' lines")
-        print("      - Params should be IDENTICAL")
+    print(f"\n💡 Note: Stats are in-memory and reset with each process.")
+    print(f"   To verify cache is working:")
+    print(f"   1. Check Redis keys > 0 (data is cached)")
+    print(f"   2. Run same analysis twice - second run should be faster")
+    print(f"   3. Check logs for 'Cache HIT' messages")
+    
+    if stats['redis'].get('keys', 0) > 0:
+        print(f"\n✅ Redis has {stats['redis']['keys']} cached entries")
+        print(f"   Your cache is working! Keys are being stored.")
+    
+    if stats['redis']['hits'] == 0 and stats['overall']['total_requests'] > 0:
+        print(f"\n⚠️  No hits in current process (normal if just checking stats)")
+        print(f"   Hits only count during actual analysis runs.")
     
     print("\n" + "=" * 70)
 
