@@ -287,7 +287,7 @@ class TradingAgentsGraph:
         try:
             # Initialize repository
             repo = AnalysisRepository()
-            if not repo.collection:
+            if repo.collection is None:
                 self.logger.debug("MongoDB not available, skipping analysis save")
                 return
             

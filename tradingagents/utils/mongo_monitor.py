@@ -114,7 +114,7 @@ def show_recent_analyses(limit: int = 10):
     print_header(f"Recent Analyses (Last {limit})")
     
     analysis_repo = AnalysisRepository()
-    if not analysis_repo.collection:
+    if analysis_repo.collection is None:
         print("❌ Analysis repository not available")
         return
     
@@ -138,7 +138,7 @@ def show_usage_summary(days: int = 7):
     print_header(f"Token Usage Summary (Last {days} Days)")
     
     usage_repo = UsageRepository()
-    if not usage_repo.collection:
+    if usage_repo.collection is None:
         print("❌ Usage repository not available")
         return
     
