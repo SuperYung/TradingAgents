@@ -7,12 +7,14 @@ from datetime import datetime
 from io import StringIO
 from tradingagents.utils.logging_manager import get_logger
 from tradingagents.dataflows.cache import get_cache
+from tradingagents.dataflows.news_saver import get_news_saver
 
 # Initialize logger
 logger = get_logger("tradingagents.dataflows.alpha_vantage")
 
-# Initialize cache
+# Initialize cache and news saver
 cache = get_cache()
+news_saver = get_news_saver()
 
 API_BASE_URL = "https://www.alphavantage.co/query"
 
@@ -130,6 +132,15 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
             }
             cache.set(data_type, response_json, **cache_params)
             logger.debug(f"Cached: {function_name} {params.get('symbol', '')}")
+        
+        # Save news articles to MongoDB if this is a news request
+        if function_name == 'NEWS_SENTIMENT':
+            symbol = params.get('tickers') or params.get('symbol')
+            news_saver.save_news_from_response(
+                response_json, 
+                symbol=symbol,
+                source='alpha_vantage'
+            )
         
         return response_json
         
