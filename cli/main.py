@@ -891,6 +891,10 @@ def run_analysis():
             selections["ticker"], selections["analysis_date"]
         )
         args = graph.propagator.get_graph_args()
+        
+        # Track analysis start time for MongoDB
+        import time
+        analysis_start_time = time.time()
 
         # Stream the analysis
         trace = []
@@ -1127,6 +1131,14 @@ def run_analysis():
         # Get final state and decision
         final_state = trace[-1]
         decision = graph.process_signal(final_state["final_trade_decision"])
+        
+        # Calculate analysis duration
+        analysis_duration = time.time() - analysis_start_time
+        
+        # Save to MongoDB if enabled (the CLI bypasses propagate() so we need to call this manually)
+        console.print("\n[bold cyan]💾 Saving analysis to MongoDB...[/bold cyan]")
+        graph._save_to_mongodb(selections["ticker"], selections["analysis_date"], final_state, analysis_duration)
+        console.print("[bold green]✅ MongoDB save attempt completed[/bold green]\n")
 
         # Update all agent statuses to completed
         for agent in message_buffer.agent_status:

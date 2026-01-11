@@ -224,7 +224,10 @@ class TradingAgentsGraph:
         )
         
         # Save to MongoDB if enabled
+        self.logger.info("🔍 [GRAPH] About to call _save_to_mongodb()...")
+        self.logger.info(f"🔍 [GRAPH] Parameters: company={company_name}, date={trade_date}, duration={duration}")
         self._save_to_mongodb(company_name, trade_date, final_state, duration)
+        self.logger.info("🔍 [GRAPH] _save_to_mongodb() call completed")
 
         # Return decision and processed signal
         return final_state, self.process_signal(final_state["final_trade_decision"])
