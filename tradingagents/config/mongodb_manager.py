@@ -131,7 +131,7 @@ class MongoDBManager:
     
     def get_collection(self, collection_name: str):
         """Get a MongoDB collection"""
-        if not self.available or not self.db:
+        if not self.available or self.db is None:
             return None
         return self.db[collection_name]
     
