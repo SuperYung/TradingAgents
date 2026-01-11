@@ -281,18 +281,34 @@ class TradingAgentsGraph:
     
     def _save_to_mongodb(self, company_name: str, trade_date: str, final_state: Dict, duration: float):
         """Save analysis results to MongoDB if enabled"""
-        if not DEFAULT_CONFIG.get('mongodb_enabled') or not DEFAULT_CONFIG.get('mongodb_save_analyses'):
+        self.logger.info("🔍 [MongoDB Save] Attempting to save analysis to MongoDB...")
+        self.logger.info(f"🔍 [MongoDB Save] mongodb_enabled={DEFAULT_CONFIG.get('mongodb_enabled')}")
+        self.logger.info(f"🔍 [MongoDB Save] mongodb_save_analyses={DEFAULT_CONFIG.get('mongodb_save_analyses')}")
+        
+        if not DEFAULT_CONFIG.get('mongodb_enabled'):
+            self.logger.warning("⚠️ [MongoDB Save] SKIPPED: mongodb_enabled=False")
             return
+            
+        if not DEFAULT_CONFIG.get('mongodb_save_analyses'):
+            self.logger.warning("⚠️ [MongoDB Save] SKIPPED: mongodb_save_analyses=False")
+            return
+        
+        self.logger.info("✅ [MongoDB Save] Config checks passed, initializing repository...")
         
         try:
             # Initialize repository
             repo = AnalysisRepository()
+            self.logger.info(f"🔍 [MongoDB Save] Repository initialized, collection={repo.collection}")
+            
             if repo.collection is None:
-                self.logger.debug("MongoDB not available, skipping analysis save")
+                self.logger.error("❌ [MongoDB Save] FAILED: Repository collection is None")
                 return
+            
+            self.logger.info("✅ [MongoDB Save] Repository ready, building analysis document...")
             
             # Generate analysis ID
             analysis_id = f"{company_name}_{trade_date}_{int(time.time())}"
+            self.logger.info(f"🔍 [MongoDB Save] Analysis ID: {analysis_id}")
             
             # Extract decision from final trade decision text
             decision_text = final_state.get('final_trade_decision', '')
@@ -354,13 +370,23 @@ class TradingAgentsGraph:
                 'updated_at': datetime.utcnow()
             }
             
+            self.logger.info(f"🔍 [MongoDB Save] Analysis document built, calling repo.save_analysis()...")
+            self.logger.info(f"🔍 [MongoDB Save] Document keys: {list(analysis_data.keys())}")
+            
             # Save to MongoDB
-            if repo.save_analysis(analysis_data):
-                self.logger.info(f"📊 Analysis saved to MongoDB: {analysis_id}")
+            result = repo.save_analysis(analysis_data)
+            self.logger.info(f"🔍 [MongoDB Save] repo.save_analysis() returned: {result}")
+            
+            if result:
+                self.logger.info(f"✅ [MongoDB Save] SUCCESS! Analysis saved: {analysis_id}")
+            else:
+                self.logger.error(f"❌ [MongoDB Save] FAILED! save_analysis returned False for: {analysis_id}")
             
         except Exception as e:
             # Non-critical error - don't fail the analysis
-            self.logger.warning(f"Failed to save analysis to MongoDB: {e}")
+            self.logger.error(f"❌ [MongoDB Save] EXCEPTION: {type(e).__name__}: {e}")
+            import traceback
+            self.logger.error(f"❌ [MongoDB Save] Traceback:\n{traceback.format_exc()}")
     
     def _get_selected_analysts(self, final_state: Dict) -> List[str]:
         """Extract list of analysts that participated in the analysis"""

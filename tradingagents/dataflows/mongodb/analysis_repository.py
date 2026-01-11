@@ -51,15 +51,23 @@ class AnalysisRepository:
         Returns:
             bool: Success status
         """
+        logger.info("🔍 [AnalysisRepo] save_analysis() called")
+        logger.info(f"🔍 [AnalysisRepo] collection={self.collection}")
+        
         if self.collection is None:
-            logger.debug("MongoDB not available, skipping analysis save")
+            logger.error("❌ [AnalysisRepo] Collection is None, cannot save!")
             return False
+        
+        logger.info("✅ [AnalysisRepo] Collection available, proceeding...")
         
         try:
             # Ensure required fields
             if 'analysis_id' not in analysis_data:
-                logger.error("Missing analysis_id in analysis data")
+                logger.error("❌ [AnalysisRepo] Missing analysis_id in analysis data")
                 return False
+            
+            analysis_id = analysis_data['analysis_id']
+            logger.info(f"🔍 [AnalysisRepo] Saving analysis_id: {analysis_id}")
             
             # Add timestamps
             now = datetime.utcnow()
@@ -67,22 +75,28 @@ class AnalysisRepository:
                 analysis_data['created_at'] = now
             analysis_data['updated_at'] = now
             
+            logger.info(f"🔍 [AnalysisRepo] Calling collection.replace_one()...")
+            
             # Upsert (insert or update)
             result = self.collection.replace_one(
-                {"analysis_id": analysis_data['analysis_id']},
+                {"analysis_id": analysis_id},
                 analysis_data,
                 upsert=True
             )
             
+            logger.info(f"🔍 [AnalysisRepo] replace_one result: upserted_id={result.upserted_id}, modified_count={result.modified_count}")
+            
             if result.upserted_id or result.modified_count > 0:
-                logger.info(f"✅ Analysis saved to MongoDB: {analysis_data['analysis_id']}")
+                logger.info(f"✅ [AnalysisRepo] SUCCESS! Analysis saved: {analysis_id}")
                 return True
             else:
-                logger.warning(f"⚠️  No changes made for: {analysis_data['analysis_id']}")
+                logger.warning(f"⚠️  [AnalysisRepo] No changes made for: {analysis_id} (might be duplicate)")
                 return True
                 
         except Exception as e:
-            logger.error(f"❌ Failed to save analysis to MongoDB: {e}")
+            logger.error(f"❌ [AnalysisRepo] EXCEPTION saving analysis: {type(e).__name__}: {e}")
+            import traceback
+            logger.error(f"❌ [AnalysisRepo] Traceback:\n{traceback.format_exc()}")
             return False
     
     def get_analysis_by_id(self, analysis_id: str) -> Optional[Dict[str, Any]]:

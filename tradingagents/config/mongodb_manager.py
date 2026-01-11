@@ -40,10 +40,12 @@ class MongoDBManager:
     """MongoDB connection manager with health checks and connection pooling"""
     
     def __init__(self):
+        logger.info("🔍 [MongoDBManager] Initializing...")
         self.client: Optional[MongoClient] = None
         self.db = None
         self.available = False
         self.enabled = DEFAULT_CONFIG.get('mongodb_enabled', False)
+        logger.info(f"🔍 [MongoDBManager] mongodb_enabled from config: {self.enabled}")
         
         if not PYMONGO_AVAILABLE:
             logger.info("📦 MongoDB disabled: pymongo not installed")
@@ -51,8 +53,11 @@ class MongoDBManager:
             return
         
         if not self.enabled:
-            logger.info("📦 MongoDB disabled via MONGODB_ENABLED=false")
+            logger.warning("⚠️ [MongoDBManager] MongoDB disabled via MONGODB_ENABLED=false")
+            logger.warning("⚠️ [MongoDBManager] Set MONGODB_ENABLED=true in .env to enable")
             return
+        
+        logger.info("✅ [MongoDBManager] MongoDB enabled, proceeding with connection...")
         
         # Get MongoDB configuration from centralized config
         self.host = DEFAULT_CONFIG.get('mongodb_host', 'localhost')
