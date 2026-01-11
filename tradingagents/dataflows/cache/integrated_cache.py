@@ -135,7 +135,7 @@ class IntegratedCache:
                 self.stats['redis_misses'] += 1
         
         # L3: Try MongoDB (for historical data only)
-        if self.mongodb.collection is not None and data_type in ['historical', 'stock_data']:
+        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
             try:
                 # Extract parameters for MongoDB query
                 symbol = params.get('symbol')
@@ -172,7 +172,7 @@ class IntegratedCache:
                     self._set_redis(cache_key, data, data_type)
                 
                 # Promote to MongoDB if historical data
-                if self.mongodb.collection is not None and data_type in ['historical', 'stock_data']:
+                if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
                     try:
                         import pandas as pd
                         if isinstance(data, (dict, pd.DataFrame)):
@@ -220,22 +220,33 @@ class IntegratedCache:
                 success = True
         
         # Store in MongoDB (L3) for historical data
-        if self.mongodb.collection is not None and data_type in ['historical', 'stock_data']:
+        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
+            logger.info(f"🔍 [IntegratedCache] Attempting MongoDB L3 save for {data_type}")
             try:
                 import pandas as pd
                 symbol = params.get('symbol')
+                logger.info(f"🔍 [IntegratedCache] symbol={symbol}, data_type={type(data)}")
                 if symbol and isinstance(data, (dict, pd.DataFrame)):
                     df = pd.DataFrame(data) if isinstance(data, dict) else data
+                    logger.info(f"🔍 [IntegratedCache] DataFrame created, empty={df.empty}, rows={len(df)}")
                     if not df.empty:
+                        logger.info(f"🔍 [IntegratedCache] Calling mongodb.save_historical_data()...")
                         self.mongodb.save_historical_data(
                             symbol,
                             df,
                             params.get('period', '1d'),
                             params.get('vendor', 'unknown')
                         )
+                        logger.info(f"✅ [IntegratedCache] MongoDB L3 save completed for {symbol}")
                         success = True
+                    else:
+                        logger.warning(f"⚠️ [IntegratedCache] DataFrame is empty, skipping MongoDB save")
+                else:
+                    logger.warning(f"⚠️ [IntegratedCache] Skipping MongoDB save: symbol={symbol}, data_type={type(data)}")
             except Exception as e:
-                logger.debug(f"MongoDB cache set error: {e}")
+                logger.error(f"❌ [IntegratedCache] MongoDB cache set error: {type(e).__name__}: {e}")
+                import traceback
+                logger.error(f"❌ [IntegratedCache] Traceback:\n{traceback.format_exc()}")
         
         # Store in File cache (L4)
         try:
