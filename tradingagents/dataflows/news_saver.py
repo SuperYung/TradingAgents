@@ -45,28 +45,38 @@ class NewsSaver:
         Returns:
             Number of articles saved
         """
+        logger.info(f"📰 [NewsSaver] save_news_from_response called")
+        logger.info(f"📰 [NewsSaver] enabled={self.enabled}, repo={self.repo is not None}, collection={self.repo.collection if self.repo else None}")
+        
         if not self.enabled or self.repo is None or self.repo.collection is None:
-            logger.debug("📰 News save skipped (MongoDB not available)")
+            logger.warning(f"📰 [NewsSaver] Skipped - enabled={self.enabled}, repo={self.repo is not None}, collection={self.repo.collection if self.repo else None}")
             return 0
         
         try:
+            logger.info(f"📰 [NewsSaver] Processing news_data type={type(news_data)}, symbol={symbol}, source={source}")
+            
             # Parse news_data if it's a string
             if isinstance(news_data, str):
+                logger.info(f"📰 [NewsSaver] Parsing JSON string...")
                 try:
                     news_data = json.loads(news_data)
-                except json.JSONDecodeError:
-                    logger.debug("📰 News data is not JSON, skipping save")
+                    logger.info(f"📰 [NewsSaver] Parsed to dict with keys: {list(news_data.keys()) if isinstance(news_data, dict) else 'not a dict'}")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"📰 [NewsSaver] JSON parse error: {e}")
                     return 0
             
             if not isinstance(news_data, dict):
-                logger.debug(f"📰 News data is {type(news_data)}, skipping save")
+                logger.warning(f"📰 [NewsSaver] News data is {type(news_data)}, not dict. Skipping.")
                 return 0
+            
+            logger.info(f"📰 [NewsSaver] News data keys: {list(news_data.keys())}")
             
             # Extract articles based on source format
             articles = self._extract_articles(news_data, symbol, source)
+            logger.info(f"📰 [NewsSaver] Extracted {len(articles)} articles")
             
             if not articles:
-                logger.debug("📰 No articles extracted from news data")
+                logger.warning("📰 [NewsSaver] No articles extracted from news data")
                 return 0
             
             # Save articles

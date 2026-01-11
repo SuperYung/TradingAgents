@@ -88,6 +88,17 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
         cached_data = cache.get(data_type, **cache_params)
         if cached_data is not None:
             logger.debug(f"Cache HIT: {function_name} {params.get('symbol', '')}")
+            
+            # IMPORTANT: Save news even from cache!
+            if function_name == 'NEWS_SENTIMENT':
+                logger.info(f"📰 [Cache HIT] Attempting to save cached news to MongoDB...")
+                symbol = params.get('tickers') or params.get('symbol')
+                news_saver.save_news_from_response(
+                    cached_data, 
+                    symbol=symbol,
+                    source='alpha_vantage'
+                )
+            
             return cached_data
     
     # Create a copy of params to avoid modifying the original
@@ -135,12 +146,16 @@ def _make_api_request(function_name: str, params: dict, use_cache: bool = True) 
         
         # Save news articles to MongoDB if this is a news request
         if function_name == 'NEWS_SENTIMENT':
+            logger.info(f"📰 [API Response] Attempting to save news to MongoDB...")
+            logger.info(f"📰 [API Response] Response type: {type(response_json)}, has 'feed': {'feed' in response_json if isinstance(response_json, dict) else 'N/A'}")
             symbol = params.get('tickers') or params.get('symbol')
-            news_saver.save_news_from_response(
+            logger.info(f"📰 [API Response] Symbol: {symbol}")
+            saved_count = news_saver.save_news_from_response(
                 response_json, 
                 symbol=symbol,
                 source='alpha_vantage'
             )
+            logger.info(f"📰 [API Response] Saved {saved_count} articles")
         
         return response_json
         

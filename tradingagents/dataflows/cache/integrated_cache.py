@@ -271,15 +271,34 @@ class IntegratedCache:
             redis_key = self._generate_redis_key(cache_key)
             ttl = self.config.get_ttl(data_type)
             
+            # Convert data to JSON-serializable format
+            # Handle pandas Timestamps and other non-serializable types
+            import pandas as pd
+            
+            def convert_to_serializable(obj):
+                """Convert non-serializable types to strings"""
+                if isinstance(obj, (pd.Timestamp, pd.Timedelta)):
+                    return str(obj)
+                elif isinstance(obj, dict):
+                    return {str(k): convert_to_serializable(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_to_serializable(item) for item in obj]
+                else:
+                    return obj
+            
+            serializable_data = convert_to_serializable(data)
+            
             self.redis.setex(
                 redis_key,
                 ttl,
-                json.dumps(data, default=str)
+                json.dumps(serializable_data, default=str)
             )
             logger.debug(f"💾 Redis SET: {data_type} (TTL: {ttl}s)")
             return True
         except Exception as e:
             logger.warning(f"Redis set error: {e}")
+            import traceback
+            logger.debug(f"Redis set traceback:\n{traceback.format_exc()}")
             return False
     
     def delete(self, data_type: str, **params) -> bool:
