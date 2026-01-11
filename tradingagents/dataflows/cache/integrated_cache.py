@@ -135,7 +135,7 @@ class IntegratedCache:
                 self.stats['redis_misses'] += 1
         
         # L3: Try MongoDB (for historical data only)
-        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
+        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'historical_data_raw', 'stock_data']:
             try:
                 # Extract parameters for MongoDB query
                 symbol = params.get('symbol')
@@ -172,7 +172,7 @@ class IntegratedCache:
                     self._set_redis(cache_key, data, data_type)
                 
                 # Promote to MongoDB if historical data
-                if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
+                if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'historical_data_raw', 'stock_data']:
                     try:
                         import pandas as pd
                         if isinstance(data, (dict, pd.DataFrame)):
@@ -220,7 +220,7 @@ class IntegratedCache:
                 success = True
         
         # Store in MongoDB (L3) for historical data
-        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'stock_data']:
+        if self.mongodb.collection is not None and data_type in ['historical', 'historical_data', 'historical_data_raw', 'stock_data']:
             logger.info(f"🔍 [IntegratedCache] Attempting MongoDB L3 save for {data_type}")
             try:
                 import pandas as pd

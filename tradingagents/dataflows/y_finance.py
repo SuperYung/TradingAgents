@@ -65,7 +65,7 @@ def get_YFin_data_online(
 
     result = header + csv_string
     
-    # Cache the result
+    # Cache the result string for LLM consumption
     cache.set(
         'historical_data',
         result,
@@ -74,7 +74,18 @@ def get_YFin_data_online(
         end_date=end_date,
         vendor='yfinance'
     )
-    logger.debug(f"💾 Cached: {symbol} {start_date} to {end_date}")
+    
+    # Also cache the raw DataFrame for MongoDB historical storage
+    # This allows MongoDB to store structured data, not just CSV strings
+    cache.set(
+        'historical_data_raw',
+        data,  # DataFrame, not string
+        symbol=symbol.upper(),
+        start_date=start_date,
+        end_date=end_date,
+        vendor='yfinance'
+    )
+    logger.debug(f"💾 Cached: {symbol} {start_date} to {end_date} (CSV + DataFrame)")
 
     return result
 
