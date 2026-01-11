@@ -52,8 +52,8 @@ print('  ✅ token_usage indexes created');
 
 // Insert sample configuration document
 print('  Creating metadata collection...');
-db.createCollection('_metadata');
-db._metadata.insertOne({
+db.createCollection('metadata');
+db.getCollection('metadata').insertOne({
     "initialized_at": new Date(),
     "version": "1.0.0",
     "collections": [
