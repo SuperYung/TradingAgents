@@ -25,7 +25,7 @@ class HistoricalRepository:
     
     def _ensure_indexes(self):
         """Create indexes for optimal query performance"""
-        if not self.collection:
+        if self.collection is None:
             return
         
         try:
@@ -65,7 +65,7 @@ class HistoricalRepository:
         Returns:
             int: Number of records saved
         """
-        if not self.collection or data.empty:
+        if self.collection is None or data.empty:
             return 0
         
         try:
@@ -139,7 +139,7 @@ class HistoricalRepository:
         Returns:
             DataFrame with OHLCV data or None
         """
-        if not self.collection:
+        if self.collection is None:
             return None
         
         try:
@@ -189,7 +189,7 @@ class HistoricalRepository:
     
     def delete_old_data(self, days: int = 90) -> int:
         """Delete data older than specified days"""
-        if not self.collection:
+        if self.collection is None:
             return 0
         
         try:
@@ -206,7 +206,7 @@ class HistoricalRepository:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get repository statistics"""
-        if not self.collection:
+        if self.collection is None:
             return {"available": False}
         
         try:

@@ -24,7 +24,7 @@ class UsageRepository:
     
     def _ensure_indexes(self):
         """Create indexes for optimal query performance"""
-        if not self.collection:
+        if self.collection is None:
             return
         
         try:
@@ -48,7 +48,7 @@ class UsageRepository:
         Returns:
             bool: Success status
         """
-        if not self.collection:
+        if self.collection is None:
             return False
         
         try:
@@ -71,7 +71,7 @@ class UsageRepository:
     
     def get_usage_by_analysis(self, analysis_id: str) -> List[Dict[str, Any]]:
         """Get all token usage for an analysis"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -87,7 +87,7 @@ class UsageRepository:
     
     def get_usage_by_date_range(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
         """Get usage within date range"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -116,7 +116,7 @@ class UsageRepository:
         Returns:
             Summary dictionary with totals and breakdowns
         """
-        if not self.collection:
+        if self.collection is None:
             return {"available": False}
         
         try:
@@ -187,7 +187,7 @@ class UsageRepository:
     
     def delete_old_usage(self, days: int = 90) -> int:
         """Delete usage records older than specified days"""
-        if not self.collection:
+        if self.collection is None:
             return 0
         
         try:
@@ -204,7 +204,7 @@ class UsageRepository:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get repository statistics"""
-        if not self.collection:
+        if self.collection is None:
             return {"available": False}
         
         try:

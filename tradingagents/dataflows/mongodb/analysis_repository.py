@@ -24,7 +24,7 @@ class AnalysisRepository:
     
     def _ensure_indexes(self):
         """Create indexes for optimal query performance"""
-        if not self.collection:
+        if self.collection is None:
             return
         
         try:
@@ -51,7 +51,7 @@ class AnalysisRepository:
         Returns:
             bool: Success status
         """
-        if not self.collection:
+        if self.collection is None:
             logger.debug("MongoDB not available, skipping analysis save")
             return False
         
@@ -87,7 +87,7 @@ class AnalysisRepository:
     
     def get_analysis_by_id(self, analysis_id: str) -> Optional[Dict[str, Any]]:
         """Get analysis by analysis_id"""
-        if not self.collection:
+        if self.collection is None:
             return None
         
         try:
@@ -102,7 +102,7 @@ class AnalysisRepository:
     
     def get_analyses_by_symbol(self, symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent analyses for a symbol"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -118,7 +118,7 @@ class AnalysisRepository:
     
     def get_recent_analyses(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Get most recent analyses"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -134,7 +134,7 @@ class AnalysisRepository:
     
     def get_analyses_by_date_range(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
         """Get analyses within date range"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -155,7 +155,7 @@ class AnalysisRepository:
     
     def delete_analysis(self, analysis_id: str) -> bool:
         """Delete an analysis"""
-        if not self.collection:
+        if self.collection is None:
             return False
         
         try:
@@ -170,7 +170,7 @@ class AnalysisRepository:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get repository statistics"""
-        if not self.collection:
+        if self.collection is None:
             return {"available": False}
         
         try:

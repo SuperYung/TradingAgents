@@ -24,7 +24,7 @@ class NewsRepository:
     
     def _ensure_indexes(self):
         """Create indexes for optimal query performance"""
-        if not self.collection:
+        if self.collection is None:
             return
         
         try:
@@ -54,7 +54,7 @@ class NewsRepository:
         Returns:
             bool: Success status
         """
-        if not self.collection:
+        if self.collection is None:
             return False
         
         try:
@@ -92,7 +92,7 @@ class NewsRepository:
     
     def save_news_batch(self, articles: List[Dict[str, Any]], ttl_days: int = 30) -> int:
         """Save multiple news articles"""
-        if not self.collection or not articles:
+        if self.collection is None or not articles:
             return 0
         
         saved_count = 0
@@ -107,7 +107,7 @@ class NewsRepository:
     
     def get_news_by_symbol(self, symbol: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Get recent news for a symbol"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -124,7 +124,7 @@ class NewsRepository:
     def get_news_by_date_range(self, start_date: str, end_date: str, 
                                symbol: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get news within date range"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -150,7 +150,7 @@ class NewsRepository:
     
     def get_news_by_topics(self, topics: List[str], limit: int = 20) -> List[Dict[str, Any]]:
         """Get news by topics/tags"""
-        if not self.collection:
+        if self.collection is None:
             return []
         
         try:
@@ -166,7 +166,7 @@ class NewsRepository:
     
     def delete_old_news(self, days: int = 30) -> int:
         """Delete news older than specified days"""
-        if not self.collection:
+        if self.collection is None:
             return 0
         
         try:
@@ -183,7 +183,7 @@ class NewsRepository:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get repository statistics"""
-        if not self.collection:
+        if self.collection is None:
             return {"available": False}
         
         try:
