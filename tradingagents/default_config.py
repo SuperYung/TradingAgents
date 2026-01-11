@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Load .env file from project root
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
@@ -17,7 +21,13 @@ DEFAULT_CONFIG = {
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
-    # MongoDB configuration
+    # Redis configuration (L2 Cache)
+    "redis_enabled": os.getenv("REDIS_ENABLED", "false").lower() == "true",
+    "redis_host": os.getenv("REDIS_HOST", "localhost"),
+    "redis_port": int(os.getenv("REDIS_PORT", "6379")),
+    "redis_db": int(os.getenv("REDIS_DB", "0")),
+    "redis_password": os.getenv("REDIS_PASSWORD", ""),
+    # MongoDB configuration (L3 Cache + Persistent Storage)
     "mongodb_enabled": os.getenv("MONGODB_ENABLED", "false").lower() == "true",
     "mongodb_host": os.getenv("MONGODB_HOST", "localhost"),
     "mongodb_port": int(os.getenv("MONGODB_PORT", "27017")),

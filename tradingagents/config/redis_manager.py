@@ -1,27 +1,13 @@
 """
 Redis connection manager with graceful fallback
-Designed to be MongoDB/WebUI-ready for future expansion
+Uses centralized configuration from default_config.py
 """
 
 import redis
 import logging
-import os
 from typing import Optional
-from pathlib import Path
 
-# Auto-load .env file if python-dotenv is available
-try:
-    from dotenv import load_dotenv
-    # Find .env in project root (3 levels up from this file)
-    env_path = Path(__file__).parent.parent.parent / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
-        logging.debug(f"Loaded environment from {env_path}")
-except ImportError:
-    # python-dotenv not installed, will use system environment variables
-    logging.debug("python-dotenv not available, using system environment variables")
-except Exception as e:
-    logging.debug(f"Could not load .env file: {e}")
+from tradingagents.default_config import DEFAULT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -39,33 +25,25 @@ class RedisManager:
     """
     
     def __init__(self):
-        self.enabled = self._parse_bool(os.getenv("REDIS_ENABLED", "false"))
+        self.enabled = DEFAULT_CONFIG.get('redis_enabled', False)
         self.redis_client: Optional[redis.Redis] = None
         self.available = False
-        
-        # Future: MongoDB client will be initialized here
-        self.mongodb_client = None
-        self.mongodb_available = False
         
         if self.enabled:
             self._initialize_redis()
         else:
             logger.info("📦 Redis disabled, using file cache only")
     
-    def _parse_bool(self, value: str) -> bool:
-        """Parse boolean from environment variable"""
-        return value.lower() in ('true', '1', 'yes', 'on')
-    
     def _initialize_redis(self):
         """Initialize Redis connection with connection pooling"""
         try:
             # Create connection pool for better performance
             pool = redis.ConnectionPool(
-                host=os.getenv("REDIS_HOST", "localhost"),
-                port=int(os.getenv("REDIS_PORT", "6379")),
-                password=os.getenv("REDIS_PASSWORD") or None,
-                db=int(os.getenv("REDIS_DB", "0")),
-                max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "10")),
+                host=DEFAULT_CONFIG.get('redis_host', 'localhost'),
+                port=DEFAULT_CONFIG.get('redis_port', 6379),
+                password=DEFAULT_CONFIG.get('redis_password') or None,
+                db=DEFAULT_CONFIG.get('redis_db', 0),
+                max_connections=10,
                 decode_responses=True,  # Auto-decode bytes to strings
                 socket_timeout=2,
                 socket_connect_timeout=2,
@@ -84,7 +62,7 @@ class RedisManager:
             version = info.get('redis_version', 'unknown')
             
             logger.info(f"✅ Redis connected successfully (v{version})")
-            logger.info(f"   Host: {os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}")
+            logger.info(f"   Host: {DEFAULT_CONFIG.get('redis_host')}:{DEFAULT_CONFIG.get('redis_port')}")
             
         except redis.ConnectionError as e:
             logger.warning(f"⚠️  Redis connection failed: {e}")

@@ -2,11 +2,15 @@
 """
 MongoDB Connection Manager
 Provides centralized MongoDB connection management with health checks and graceful fallback
+Uses centralized configuration from default_config.py
 """
 
 import os
 from typing import Optional
 from pathlib import Path
+
+# Import centralized config
+from tradingagents.default_config import DEFAULT_CONFIG
 
 # Import logging
 from tradingagents.utils.logging_manager import get_logger
@@ -31,18 +35,6 @@ except ImportError:
     AsyncIOMotorClient = None
     logger.debug("motor not installed - Async MongoDB features disabled")
 
-# Load environment variables
-try:
-    from dotenv import load_dotenv
-    # Load .env from project root
-    project_root = Path(__file__).parent.parent.parent
-    env_path = project_root / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
-        logger.debug(f"Loaded .env from {env_path}")
-except ImportError:
-    logger.debug("python-dotenv not installed - using system environment only")
-
 
 class MongoDBManager:
     """MongoDB connection manager with health checks and connection pooling"""
@@ -51,7 +43,7 @@ class MongoDBManager:
         self.client: Optional[MongoClient] = None
         self.db = None
         self.available = False
-        self.enabled = os.getenv('MONGODB_ENABLED', 'false').lower() == 'true'
+        self.enabled = DEFAULT_CONFIG.get('mongodb_enabled', False)
         
         if not PYMONGO_AVAILABLE:
             logger.info("📦 MongoDB disabled: pymongo not installed")
@@ -62,10 +54,10 @@ class MongoDBManager:
             logger.info("📦 MongoDB disabled via MONGODB_ENABLED=false")
             return
         
-        # Get MongoDB configuration from environment
-        self.host = os.getenv('MONGODB_HOST', 'localhost')
-        self.port = int(os.getenv('MONGODB_PORT', '27017'))
-        self.database = os.getenv('MONGODB_DATABASE', 'tradingagents')
+        # Get MongoDB configuration from centralized config
+        self.host = DEFAULT_CONFIG.get('mongodb_host', 'localhost')
+        self.port = DEFAULT_CONFIG.get('mongodb_port', 27017)
+        self.database = DEFAULT_CONFIG.get('mongodb_database', 'tradingagents')
         self.username = os.getenv('MONGODB_USERNAME', '')
         self.password = os.getenv('MONGODB_PASSWORD', '')
         self.auth_source = os.getenv('MONGODB_AUTH_SOURCE', 'admin')
